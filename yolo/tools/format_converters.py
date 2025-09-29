@@ -1,3 +1,9 @@
+import hydra
+import torch
+
+from yolo.config.config import Config
+from yolo.tools.solver import BaseModel
+
 convert_dict = {
     "19.cv1": "19.conv",
     "16.cv1": "16.conv",
@@ -21,13 +27,17 @@ def convert_weight(old_state_dict, new_state_dict, model_size: int = 38):
             _, _, conv_name, conv_id, *post_fix = weight_name.split(".")
             head_id = 30 if conv_name in ["cv2", "cv3"] else 22
             head_type = "anchor_conv" if conv_name in ["cv2", "cv4"] else "class_conv"
-            weight_name = ".".join(["model", str(head_id), "heads", conv_id, head_type, *post_fix])
+            weight_name = ".".join(
+                ["model", str(head_id), "heads", conv_id, head_type, *post_fix]
+            )
         else:
             for old_name, new_name in convert_dict.items():
                 if old_name in weight_name:
                     weight_name = weight_name.replace(old_name, new_name)
         if weight_name in new_weight_set:
-            assert new_state_dict[weight_name].shape == weight_value.shape, f"shape miss match {weight_name}"
+            assert new_state_dict[weight_name].shape == weight_value.shape, (
+                f"shape miss match {weight_name}"
+            )
             new_state_dict[weight_name] = weight_value
             new_weight_set.remove(weight_name)
 
@@ -62,7 +72,15 @@ def convert_weight_v7(old_state_dict, new_state_dict):
         if old_key_name not in old_state_dict.keys():
             if "heads" in key_name:
                 layer_idx, _, conv_idx, conv_name, *details = key_name.split(".")
-                old_key_name = ".".join(["model", str(layer_idx), head_converter[conv_name], conv_idx, *details])
+                old_key_name = ".".join(
+                    [
+                        "model",
+                        str(layer_idx),
+                        head_converter[conv_name],
+                        conv_idx,
+                        *details,
+                    ]
+                )
             elif (
                 "pre_conv" in key_name
                 or "post_conv" in key_name
@@ -79,7 +97,9 @@ def convert_weight_v7(old_state_dict, new_state_dict):
                         key_name = key_name.replace(key, value)
                 old_key_name = "model." + key_name
         map_weight.append(old_key_name)
-        assert old_key_name in old_state_dict.keys(), f"Weight Name Mismatch!! {old_key_name}"
+        assert old_key_name in old_state_dict.keys(), (
+            f"Weight Name Mismatch!! {old_key_name}"
+        )
         old_shape = old_state_dict[old_key_name].shape
         assert new_shape == old_shape, "Weight Shape Mismatch!! {old_key_name}"
         new_state_dict[new_key_name] = old_state_dict[old_key_name]
@@ -107,7 +127,9 @@ def convert_weight_seg(old_state_dict, new_state_dict):
             _, _, conv_name, conv_idx, *details = old_weight_name.split(".")
             if "proto" in conv_name:
                 conv_idx = "3"
-                new_weight_name = ".".join(["model", str(layer_idx), heads, conv_task, *details])
+                new_weight_name = ".".join(
+                    ["model", str(layer_idx), heads, conv_task, *details]
+                )
                 continue
             if "dfl" in old_weight_name:
                 continue
@@ -126,29 +148,21 @@ def convert_weight_seg(old_state_dict, new_state_dict):
                 conv_task = "mask_conv"
                 heads = "heads"
 
-            new_weight_name = ".".join(["model", str(layer_idx), heads, conv_idx, conv_task, *details])
+            new_weight_name = ".".join(
+                ["model", str(layer_idx), heads, conv_idx, conv_task, *details]
+            )
 
         if (
             new_weight_name not in new_state_dict.keys()
-            or new_state_dict[new_weight_name].shape != old_state_dict[old_weight_name].shape
+            or new_state_dict[new_weight_name].shape
+            != old_state_dict[old_weight_name].shape
         ):
             print(f"new: {new_weight_name}, old: {old_weight_name}")
-            print(f"{new_state_dict[new_weight_name].shape} {old_state_dict[old_weight_name].shape}")
+            print(
+                f"{new_state_dict[new_weight_name].shape} {old_state_dict[old_weight_name].shape}"
+            )
         new_state_dict[new_weight_name] = old_state_dict[old_weight_name]
     return new_state_dict
-
-
-import sys
-from pathlib import Path
-
-import hydra
-import torch
-
-project_root = Path(__file__).resolve().parent.parent.parent
-sys.path.append(str(project_root))
-
-from yolo.config.config import Config
-from yolo.tools.solver import BaseModel
 
 
 @hydra.main(config_path="../config", config_name="config", version_base=None)

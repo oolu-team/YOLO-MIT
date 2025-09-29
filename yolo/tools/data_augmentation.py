@@ -48,7 +48,11 @@ class RemoveOutliers:
         """
         box_areas = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 4] - boxes[:, 2])
 
-        valid_boxes = (box_areas > self.min_box_area) & (boxes[:, 3] > boxes[:, 1]) & (boxes[:, 4] > boxes[:, 2])
+        valid_boxes = (
+            (box_areas > self.min_box_area)
+            & (boxes[:, 3] > boxes[:, 1])
+            & (boxes[:, 4] > boxes[:, 2])
+        )
 
         return image, boxes[valid_boxes]
 
@@ -71,11 +75,15 @@ class PadAndResize:
 
         pad_left = (self.target_width - new_width) // 2
         pad_top = (self.target_height - new_height) // 2
-        padded_image = Image.new("RGB", (self.target_width, self.target_height), self.background_color)
+        padded_image = Image.new(
+            "RGB", (self.target_width, self.target_height), self.background_color
+        )
         padded_image.paste(resized_image, (pad_left, pad_top))
 
         boxes[:, [1, 3]] = (boxes[:, [1, 3]] * new_width + pad_left) / self.target_width
-        boxes[:, [2, 4]] = (boxes[:, [2, 4]] * new_height + pad_top) / self.target_height
+        boxes[:, [2, 4]] = (
+            boxes[:, [2, 4]] * new_height + pad_top
+        ) / self.target_height
 
         transform_info = torch.tensor([scale, pad_left, pad_top, pad_left, pad_top])
         return padded_image, boxes, transform_info
@@ -121,7 +129,9 @@ class Mosaic:
         if torch.rand(1) >= self.prob:
             return image, boxes
 
-        assert self.parent is not None, "Parent is not set. Mosaic cannot retrieve image size."
+        assert self.parent is not None, (
+            "Parent is not set. Mosaic cannot retrieve image size."
+        )
 
         img_sz = self.parent.base_size  # Assuming `image_size` is defined in parent
         more_data = self.parent.get_more_data(3)  # get 3 more images randomly
@@ -167,7 +177,9 @@ class MixUp:
         if torch.rand(1) >= self.prob:
             return image, boxes
 
-        assert self.parent is not None, "Parent is not set. MixUp cannot retrieve additional data."
+        assert self.parent is not None, (
+            "Parent is not set. MixUp cannot retrieve additional data."
+        )
 
         # Retrieve another image and its boxes randomly from the dataset
         image2, boxes2 = self.parent.get_more_data()[0]

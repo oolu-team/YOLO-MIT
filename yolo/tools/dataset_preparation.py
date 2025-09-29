@@ -25,9 +25,13 @@ def download_file(url, destination: Path):
             "•",
             TimeRemainingColumn(),
         ) as progress:
-            task = progress.add_task(f"📥 Downloading {destination.name }...", total=total_size)
+            task = progress.add_task(
+                f"📥 Downloading {destination.name}...", total=total_size
+            )
             with open(destination, "wb") as file:
-                for data in response.iter_content(chunk_size=1024 * 1024):  # 1 MB chunks
+                for data in response.iter_content(
+                    chunk_size=1024 * 1024
+                ):  # 1 MB chunks
                     file.write(data)
                     progress.update(task, advance=len(data))
     logger.info(":white_check_mark: Download completed.")
@@ -61,17 +65,24 @@ def prepare_dataset(dataset_cfg: DatasetConfig, task: str):
     for data_type, settings in dataset_cfg.auto_download.items():
         base_url = settings["base_url"]
         for dataset_type, dataset_args in settings.items():
-            if dataset_type != "annotations" and dataset_cfg.get(task, task) != dataset_type:
+            if (
+                dataset_type != "annotations"
+                and dataset_cfg.get(task, task) != dataset_type
+            ):
                 continue
             file_name = f"{dataset_args.get('file_name', dataset_type)}.zip"
             url = f"{base_url}{file_name}"
             local_zip_path = data_dir / file_name
-            extract_to = data_dir / data_type if data_type != "annotations" else data_dir
+            extract_to = (
+                data_dir / data_type if data_type != "annotations" else data_dir
+            )
             final_place = extract_to / dataset_type
 
             final_place.mkdir(parents=True, exist_ok=True)
             if check_files(final_place, dataset_args.get("file_num")):
-                logger.info(f":white_check_mark: Dataset {dataset_type: <12} already verified.")
+                logger.info(
+                    f":white_check_mark: Dataset {dataset_type: <12} already verified."
+                )
                 continue
 
             if not local_zip_path.exists():
@@ -79,13 +90,19 @@ def prepare_dataset(dataset_cfg: DatasetConfig, task: str):
             unzip_file(local_zip_path, extract_to)
 
             if not check_files(final_place, dataset_args.get("file_num")):
-                logger.error(f"Error verifying the {dataset_type} dataset after extraction.")
+                logger.error(
+                    f"Error verifying the {dataset_type} dataset after extraction."
+                )
 
 
-def prepare_weight(download_link: Optional[str] = None, weight_path: Path = Path("v9-c.pt")):
+def prepare_weight(
+    download_link: Optional[str] = None, weight_path: Path = Path("v9-c.pt")
+):
     weight_name = weight_path.name
     if download_link is None:
-        download_link = "https://github.com/MultimediaTechLab/YOLO/releases/download/v1.0-alpha/"
+        download_link = (
+            "https://github.com/MultimediaTechLab/YOLO/releases/download/v1.0-alpha/"
+        )
     weight_link = f"{download_link}{weight_name}"
 
     if not weight_path.parent.is_dir():

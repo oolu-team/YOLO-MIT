@@ -51,7 +51,11 @@ def draw_bboxes(
         bbox = [(x_min, y_min), (x_max, y_max)]
 
         random.seed(int(class_id))
-        color_map = (random.randint(0, 200), random.randint(0, 200), random.randint(0, 200))
+        color_map = (
+            random.randint(0, 200),
+            random.randint(0, 200),
+            random.randint(0, 200),
+        )
 
         draw.rounded_rectangle(bbox, outline=(*color_map, 200), radius=5, width=2)
         draw.rounded_rectangle(bbox, fill=(*color_map, 100), radius=5)
@@ -101,7 +105,13 @@ def draw_model(*, model_cfg: ModelConfig = None, model: YOLO = None, v7_base=Fal
         pattern_list = [("ELAN", 8, 3), ("ELAN", 8, 55), ("MP", 5, 11)]
         for name, size, position in pattern_list:
             pattern_mat.append(
-                (name, size, model_mat[position : position + size, position + 1 : position + 1 + size].copy())
+                (
+                    name,
+                    size,
+                    model_mat[
+                        position : position + size, position + 1 : position + 1 + size
+                    ].copy(),
+                )
             )
 
     dot = Digraph(comment="Model Flow Chart")
@@ -123,4 +133,6 @@ def draw_model(*, model_cfg: ModelConfig = None, model: YOLO = None, v7_base=Fal
         dot.render("Model-arch", format="png", cleanup=True)
         logger.info(":artist_palette: Drawing Model Architecture at Model-arch.png")
     except:
-        logger.warning(":warning: Could not find graphviz backend, continue without drawing the model architecture")
+        logger.warning(
+            ":warning: Could not find graphviz backend, continue without drawing the model architecture"
+        )

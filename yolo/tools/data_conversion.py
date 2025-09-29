@@ -23,23 +23,30 @@ def process_annotations(
     """
     Process and save annotations to files, with option to remap category IDs.
     """
-    for image_id, annotations in track(image_annotations.items(), description="Processing annotations"):
+    for image_id, annotations in track(
+        image_annotations.items(), description="Processing annotations"
+    ):
         file_path = output_dir / "{image_id:0>12}.txt"
         if not annotations:
             continue
         with open(file_path, "w") as file:
             for annotation in annotations:
-                process_annotation(annotation, image_info_dict[image_id], id_to_idx, file)
+                process_annotation(
+                    annotation, image_info_dict[image_id], id_to_idx, file
+                )
 
 
-def process_annotation(annotation: Dict, image_dims: tuple, id_to_idx: Optional[Dict[int, int]], file) -> None:
+def process_annotation(
+    annotation: Dict, image_dims: tuple, id_to_idx: Optional[Dict[int, int]], file
+) -> None:
     """
     Convert a single annotation's segmentation and write it to the open file handle.
     """
     category_id = annotation["category_id"]
     segmentation = (
         annotation["segmentation"][0]
-        if annotation["segmentation"] and isinstance(annotation["segmentation"][0], list)
+        if annotation["segmentation"]
+        and isinstance(annotation["segmentation"][0], list)
         else None
     )
 
@@ -47,7 +54,9 @@ def process_annotation(annotation: Dict, image_dims: tuple, id_to_idx: Optional[
         return
 
     img_width, img_height = image_dims
-    normalized_segmentation = normalize_segmentation(segmentation, img_width, img_height)
+    normalized_segmentation = normalize_segmentation(
+        segmentation, img_width, img_height
+    )
 
     if id_to_idx:
         category_id = id_to_idx.get(category_id, category_id)
@@ -55,7 +64,9 @@ def process_annotation(annotation: Dict, image_dims: tuple, id_to_idx: Optional[
     file.write(f"{category_id} {' '.join(normalized_segmentation)}\n")
 
 
-def normalize_segmentation(segmentation: List[float], img_width: int, img_height: int) -> List[str]:
+def normalize_segmentation(
+    segmentation: List[float], img_width: int, img_height: int
+) -> List[str]:
     """
     Normalize and format segmentation coordinates.
     """
@@ -75,8 +86,14 @@ def convert_annotations(json_file: str, output_dir: str) -> None:
 
     Path(output_dir).mkdir(exist_ok=True)
 
-    image_info_dict = {img["id"]: (img["width"], img["height"]) for img in data.get("images", [])}
-    id_to_idx = discretize_categories(data.get("categories", [])) if "categories" in data else None
+    image_info_dict = {
+        img["id"]: (img["width"], img["height"]) for img in data.get("images", [])
+    }
+    id_to_idx = (
+        discretize_categories(data.get("categories", []))
+        if "categories" in data
+        else None
+    )
     image_annotations = {img_id: [] for img_id in image_info_dict}
 
     for annotation in data.get("annotations", []):
@@ -87,5 +104,10 @@ def convert_annotations(json_file: str, output_dir: str) -> None:
 
 
 if __name__ == "__main__":
-    convert_annotations("./data/coco/annotations/instances_train2017.json", "./data/coco/labels/train2017/")
-    convert_annotations("./data/coco/annotations/instances_val2017.json", "./data/coco/labels/val2017/")
+    convert_annotations(
+        "./data/coco/annotations/instances_train2017.json",
+        "./data/coco/labels/train2017/",
+    )
+    convert_annotations(
+        "./data/coco/annotations/instances_val2017.json", "./data/coco/labels/val2017/"
+    )

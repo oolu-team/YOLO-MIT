@@ -26,8 +26,21 @@ def make_ap_table(score: Dict[str, float], past_result=[], max_result=None, epoc
     ap_table.add_column("Avg. Recall", justify="left", style="cyan")
     ap_table.add_column("%", justify="right", style="green", width=5)
 
-    for eps, (ap_name1, ap_color1, ap_value1, ap_name2, ap_color2, ap_value2) in past_result:
-        ap_table.add_row(f"{eps: 3d}", ap_name1, f"{ap_color1}{ap_value1:.2f}", ap_name2, f"{ap_color2}{ap_value2:.2f}")
+    for eps, (
+        ap_name1,
+        ap_color1,
+        ap_value1,
+        ap_name2,
+        ap_color2,
+        ap_value2,
+    ) in past_result:
+        ap_table.add_row(
+            f"{eps: 3d}",
+            ap_name1,
+            f"{ap_color1}{ap_value1:.2f}",
+            ap_name2,
+            f"{ap_color2}{ap_value2:.2f}",
+        )
     if past_result:
         ap_table.add_row()
 
@@ -44,6 +57,12 @@ def make_ap_table(score: Dict[str, float], past_result=[], max_result=None, epoc
     ]
 
     for ap_name, ap_color, ap_value, ar_name, ar_color, ar_value in metrics:
-        ap_table.add_row(f"{epoch: 3d}", ap_name, f"{ap_color}{ap_value:.2f}", ar_name, f"{ar_color}{ar_value:.2f}")
+        ap_table.add_row(
+            f"{epoch: 3d}",
+            ap_name,
+            f"{ap_color}{ap_value:.2f}",
+            ar_name,
+            f"{ar_color}{ar_value:.2f}",
+        )
 
     return ap_table, this_ap

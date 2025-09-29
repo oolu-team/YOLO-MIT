@@ -20,7 +20,9 @@ def get_layer_map():
     return layer_map
 
 
-def auto_pad(kernel_size: _size_2_t, dilation: _size_2_t = 1, **kwargs) -> Tuple[int, int]:
+def auto_pad(
+    kernel_size: _size_2_t, dilation: _size_2_t = 1, **kwargs
+) -> Tuple[int, int]:
     """
     Auto Padding for the convolution blocks
     """
