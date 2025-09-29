@@ -13,7 +13,7 @@ class AnchorConfig:
 
 
 @dataclass
-class LayerConfg:
+class LayerConfig:
     args: Dict
     source: Union[int, str, List[int]]
     tags: str
@@ -21,7 +21,7 @@ class LayerConfg:
 
 @dataclass
 class BlockConfig:
-    block: List[Dict[str, LayerConfg]]
+    block: List[Dict[str, LayerConfig]]
 
 
 @dataclass
