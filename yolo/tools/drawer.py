@@ -1,5 +1,4 @@
 import random
-from typing import List, Optional, Union
 
 import numpy as np
 import torch
@@ -12,10 +11,10 @@ from yolo.utils.logger import logger
 
 
 def draw_bboxes(
-    img: Union[Image.Image, torch.Tensor],
-    bboxes: List[List[Union[int, float]]],
+    img: Image.Image | torch.Tensor,
+    bboxes: list[list[int | float]],
     *,
-    idx2label: Optional[list] = None,
+    idx2label: list | None = None,
 ):
     """
     Draw bounding boxes on an image.
@@ -74,7 +73,9 @@ def draw_bboxes(
     return img
 
 
-def draw_model(*, model_cfg: ModelConfig = None, model: YOLO = None, v7_base=False):
+def draw_model(
+    *, model_cfg: ModelConfig | None = None, model: YOLO | None = None, v7_base=False
+):
     from graphviz import Digraph
 
     if model_cfg:
@@ -132,7 +133,7 @@ def draw_model(*, model_cfg: ModelConfig = None, model: YOLO = None, v7_base=Fal
     try:
         dot.render("Model-arch", format="png", cleanup=True)
         logger.info(":artist_palette: Drawing Model Architecture at Model-arch.png")
-    except:
+    except Exception:
         logger.warning(
             ":warning: Could not find graphviz backend, continue without drawing the model architecture"
         )

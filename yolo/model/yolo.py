@@ -1,6 +1,5 @@
 from collections import OrderedDict
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
 import torch
 from omegaconf import ListConfig, OmegaConf
@@ -29,7 +28,7 @@ class YOLO(nn.Module):
         self.reg_max = getattr(model_cfg.anchor, "reg_max", 16)
         self.build_model(model_cfg.model)
 
-    def build_model(self, model_arch: Dict[str, List[Dict[str, Dict[str, Dict]]]]):
+    def build_model(self, model_arch: dict[str, list[dict[str, dict[str, dict]]]]):
         self.layer_index = {}
         output_dim, layer_idx = [3], 1
         logger.info(":tractor: Building YOLO")
@@ -78,9 +77,7 @@ class YOLO(nn.Module):
                 setattr(layer, "out_c", out_channels)
             layer_idx += 1
 
-    def forward(
-        self, x, external: Optional[Dict] = None, shortcut: Optional[str] = None
-    ):
+    def forward(self, x, external: dict | None = None, shortcut: str | None = None):
         y = {0: x, **(external or {})}
         output = dict()
         for index, layer in enumerate(self.model, start=1):
@@ -108,7 +105,7 @@ class YOLO(nn.Module):
         layer_type: str,
         layer_args: dict,
         output_dim: list,
-        source: Union[int, list],
+        source: int | list,
     ):
         if hasattr(layer_args, "out_channels"):
             return layer_args["out_channels"]
@@ -119,7 +116,7 @@ class YOLO(nn.Module):
         if isinstance(source, list):
             return sum(output_dim[idx] for idx in source)
 
-    def get_source_idx(self, source: Union[ListConfig, str, int], layer_idx: int):
+    def get_source_idx(self, source: list | str | int, layer_idx: int):
         if isinstance(source, ListConfig):
             return [self.get_source_idx(index, layer_idx) for index in source]
         if isinstance(source, str):
@@ -131,7 +128,7 @@ class YOLO(nn.Module):
         return source
 
     def create_layer(
-        self, layer_type: str, source: Union[int, list], layer_info: Dict, **kwargs
+        self, layer_type: str, source: int | list, layer_info: dict, **kwargs
     ) -> YOLOLayer:
         if layer_type in self.layer_map:
             layer = self.layer_map[layer_type](**kwargs)
@@ -146,7 +143,7 @@ class YOLO(nn.Module):
         else:
             raise ValueError(f"Unsupported layer type: {layer_type}")
 
-    def save_load_weights(self, weights: Union[Path, OrderedDict]):
+    def save_load_weights(self, weights: list[Path | OrderedDict]):
         """
         Update the model's weights with the provided weights.
 
@@ -194,7 +191,7 @@ class YOLO(nn.Module):
 
 
 def create_model(
-    model_cfg: ModelConfig, weight_path: Union[bool, Path] = True, class_num: int = 80
+    model_cfg: ModelConfig, weight_path: bool | Path = True, class_num: int = 80
 ) -> YOLO:
     """Constructs and returns a model from a Dictionary configuration file.
 

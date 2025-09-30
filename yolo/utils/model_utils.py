@@ -2,7 +2,7 @@ import os
 from copy import deepcopy
 from math import exp
 from pathlib import Path
-from typing import List, Optional, Type, Union
+from typing import Type
 
 import torch
 import torch.distributed as dist
@@ -19,7 +19,7 @@ from yolo.utils.bounding_box_utils import Anc2Box, Vec2Box, bbox_nms, transform_
 from yolo.utils.logger import logger
 
 
-def lerp(start: float, end: float, step: Union[int, float], total: int = 1):
+def lerp(start: float, end: float, step: int | float, total: int = 1):
     """
     Linearly interpolates between start and end values.
 
@@ -160,7 +160,7 @@ def initialize_distributed() -> None:
     return local_rank
 
 
-def get_device(device_spec: Union[str, int, List[int]]) -> torch.device:
+def get_device(device_spec: str | int | list[int]) -> torch.device:
     ddp_flag = False
     if isinstance(device_spec, (list, ListConfig)):
         ddp_flag = True
@@ -184,15 +184,15 @@ class PostProcess:
     scale back the prediction and do nms for pred_bbox
     """
 
-    def __init__(self, converter: Union[Vec2Box, Anc2Box], nms_cfg: NMSConfig) -> None:
+    def __init__(self, converter: Vec2Box | Anc2Box, nms_cfg: NMSConfig) -> None:
         self.converter = converter
         self.nms = nms_cfg
 
     def __call__(
         self,
         predict,
-        rev_tensor: Optional[Tensor] = None,
-        image_size: Optional[List[int]] = None,
+        rev_tensor: Tensor | None = None,
+        image_size: list[int] | None = None,
     ) -> List[Tensor]:
         if image_size is not None:
             self.converter.update(image_size)
@@ -205,7 +205,7 @@ class PostProcess:
         return pred_bbox
 
 
-def collect_prediction(predict_json: List, local_rank: int) -> List:
+def collect_prediction(predict_json: list, local_rank: int) -> list:
     """
     Collects predictions from all distributed processes and gathers them on the main process (rank 0).
 

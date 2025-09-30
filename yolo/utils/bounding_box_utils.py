@@ -1,5 +1,4 @@
 import math
-from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 from einops import rearrange
@@ -124,7 +123,7 @@ def transform_bbox(bbox: Tensor, indicator="xywh -> xyxy"):
     return bbox.to(dtype=data_type)
 
 
-def generate_anchors(image_size: List[int], strides: List[int]):
+def generate_anchors(image_size: list[int], strides: list[int]):
     """
     Find the anchor maps for each w, h.
 
@@ -246,7 +245,7 @@ class BoxMatcher:
         topk_mask = topk_targets > 0
         return topk_targets, topk_mask
 
-    def ensure_one_anchor(self, target_matrix: Tensor, topk_mask: tensor) -> Tensor:
+    def ensure_one_anchor(self, target_matrix: Tensor, topk_mask: Tensor) -> Tensor:
         """
         Ensures each valid target gets at least one anchor matched based on the unmasked target matrix,
         which enables an otherwise invalid match. This enables too small or too large targets to be
@@ -293,7 +292,7 @@ class BoxMatcher:
         unique_indices = topk_mask.to(torch.uint8).argmax(dim=1)
         return unique_indices[..., None], topk_mask.any(dim=1), topk_mask
 
-    def __call__(self, target: Tensor, predict: Tuple[Tensor]) -> Tuple[Tensor, Tensor]:
+    def __call__(self, target: Tensor, predict: tuple[Tensor]) -> tuple[Tensor, Tensor]:
         """Matches each target to the most suitable anchor.
         1. For each anchor prediction, find the highest suitability targets.
         2. Match target to the best anchor.
@@ -468,7 +467,7 @@ class Anc2Box:
             strides.append(W // anchor_num[1])
         return strides
 
-    def generate_anchors(self, image_size: List[int]):
+    def generate_anchors(self, image_size: list[int]):
         anchor_grids = []
         for stride in self.strides:
             W, H = image_size[0] // stride, image_size[1] // stride
@@ -487,7 +486,7 @@ class Anc2Box:
     def update(self, image_size):
         self.anchor_grids = self.generate_anchors(image_size)
 
-    def __call__(self, predicts: List[Tensor]):
+    def __call__(self, predicts: list[Tensor]):
         preds_box, preds_cls, preds_cnf = [], [], []
         for layer_idx, predict in enumerate(predicts):
             predict = rearrange(predict, "B (L C) h w -> B L h w C", L=self.anchor_num)
@@ -525,7 +524,7 @@ def bbox_nms(
     cls_dist: Tensor,
     bbox: Tensor,
     nms_cfg: NMSConfig,
-    confidence: Optional[Tensor] = None,
+    confidence: Tensor | None = None,
 ):
     cls_dist = cls_dist.sigmoid() * (1 if confidence is None else confidence)
 
@@ -553,13 +552,13 @@ def bbox_nms(
     return predicts_nms
 
 
-def calculate_map(predictions, ground_truths) -> Dict[str, Tensor]:
+def calculate_map(predictions, ground_truths) -> dict[str, Tensor]:
     metric = MeanAveragePrecision(iou_type="bbox", box_format="xyxy")
     mAP = metric([to_metrics_format(predictions)], [to_metrics_format(ground_truths)])
     return mAP
 
 
-def to_metrics_format(prediction: Tensor) -> Dict[str, Union[float, Tensor]]:
+def to_metrics_format(prediction: Tensor) -> dict[str, float | Tensor]:
     prediction = prediction[prediction[:, 0] != -1]
     bbox = {"boxes": prediction[:, 1:5], "labels": prediction[:, 0].int()}
     if prediction.size(1) == 6:

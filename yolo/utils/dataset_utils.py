@@ -2,7 +2,7 @@ import json
 import os
 from itertools import chain
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import torch
@@ -11,7 +11,7 @@ from yolo.tools.data_conversion import discretize_categories
 from yolo.utils.logger import logger
 
 
-def locate_label_paths(dataset_path: Path, phase_name: Path) -> Tuple[Path, Path]:
+def locate_label_paths(dataset_path: Path, phase_name: Path) -> tuple[Path, str | None]:
     """
     Find the path to label files for a specified dataset and phase(e.g. training).
 
@@ -38,7 +38,7 @@ def locate_label_paths(dataset_path: Path, phase_name: Path) -> Tuple[Path, Path
     return [], None
 
 
-def create_image_metadata(labels_path: str) -> Tuple[Dict[str, List], Dict[str, Dict]]:
+def create_image_metadata(labels_path: str) -> tuple[dict[str, list], dict[str, dict]]:
     """
     Create a dictionary containing image information and annotations indexed by image ID.
 
@@ -66,7 +66,7 @@ def create_image_metadata(labels_path: str) -> Tuple[Dict[str, List], Dict[str, 
 
 
 def organize_annotations_by_image(
-    data: Dict[str, Any], id_to_idx: Optional[Dict[int, int]]
+    data: dict[str, Any], id_to_idx: dict[int, int] | None
 ):
     """
     Use image index to lookup every annotations
@@ -92,8 +92,8 @@ def organize_annotations_by_image(
 
 
 def scale_segmentation(
-    annotations: List[Dict[str, Any]], image_dimensions: Dict[str, int]
-) -> Optional[List[List[float]]]:
+    annotations: list[dict[str, Any]], image_dimensions: dict[str, int]
+) -> list[list[float]] | None:
     """
     Scale the segmentation data based on image dimensions and return a list of scaled segmentation data.
 
@@ -128,7 +128,7 @@ def scale_segmentation(
     return seg_array_with_cat
 
 
-def tensorlize(data):
+def tensorize(data):
     try:
         img_paths, bboxes, img_ratios = zip(*data)
     except ValueError as e:

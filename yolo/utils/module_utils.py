@@ -1,5 +1,4 @@
 import inspect
-from typing import Tuple, Union
 
 from torch import Tensor, nn
 from torch.nn.common_types import _size_2_t
@@ -22,7 +21,7 @@ def get_layer_map():
 
 def auto_pad(
     kernel_size: _size_2_t, dilation: _size_2_t = 1, **kwargs
-) -> Tuple[int, int]:
+) -> tuple[int, int]:
     """
     Auto Padding for the convolution blocks
     """
@@ -54,7 +53,7 @@ def create_activation_function(activation: str) -> nn.Module:
         raise ValueError(f"Activation function '{activation}' is not found in torch.nn")
 
 
-def round_up(x: Union[int, Tensor], div: int = 1) -> Union[int, Tensor]:
+def round_up(x: int | Tensor, div: int = 1) -> int | Tensor:
     """
     Rounds up `x` to the bigger-nearest multiple of `div`.
     """

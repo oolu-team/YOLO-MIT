@@ -1,34 +1,34 @@
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from torch import nn
 
 
 @dataclass
 class AnchorConfig:
-    strides: List[int]
-    reg_max: Optional[int]
-    anchor_num: Optional[int]
-    anchor: List[List[int]]
+    strides: list[int]
+    reg_max: int | None
+    anchor_num: int | None
+    anchor: list[list[int]]
 
 
 @dataclass
 class LayerConfig:
-    args: Dict
-    source: Union[int, str, List[int]]
+    args: dict
+    source: int | str | list[int]
     tags: str
 
 
 @dataclass
 class BlockConfig:
-    block: List[Dict[str, LayerConfig]]
+    block: list[dict[str, LayerConfig]]
 
 
 @dataclass
 class ModelConfig:
-    name: Optional[str]
+    name: str | None
     anchor: AnchorConfig
-    model: Dict[str, BlockConfig]
+    model: dict[str, BlockConfig]
 
 
 @dataclass
@@ -39,15 +39,15 @@ class DownloadDetail:
 
 @dataclass
 class DownloadOptions:
-    details: Dict[str, DownloadDetail]
+    details: dict[str, DownloadDetail]
 
 
 @dataclass
 class DatasetConfig:
     path: str
     class_num: int
-    class_list: List[str]
-    auto_download: Optional[DownloadOptions]
+    class_list: list[str]
+    auto_download: DownloadOptions | None
 
 
 @dataclass
@@ -56,10 +56,10 @@ class DataConfig:
     batch_size: int
     pin_memory: bool
     cpu_num: int
-    image_size: List[int]
-    data_augment: Dict[str, int]
-    source: Optional[Union[str, int]]
-    dynamic_shape: Optional[bool]
+    image_size: list[int]
+    data_augment: dict[str, int]
+    source: str | int | None
+    dynamic_shape: bool | None
 
 
 @dataclass
@@ -79,21 +79,21 @@ class OptimizerConfig:
 class MatcherConfig:
     iou: str
     topk: int
-    factor: Dict[str, int]
+    factor: dict[str, int]
 
 
 @dataclass
 class LossConfig:
-    objective: Dict[str, int]
-    aux: Union[bool, float]
+    objective: dict[str, int]
+    aux: bool | float
     matcher: MatcherConfig
 
 
 @dataclass
 class SchedulerConfig:
     type: str
-    warmup: Dict[str, Union[int, float]]
-    args: Dict[str, Any]
+    warmup: dict[str, int | float]
+    args: dict[str, Any]
 
 
 @dataclass
@@ -114,7 +114,7 @@ class InferenceConfig:
     task: str
     nms: NMSConfig
     data: DataConfig
-    fast_inference: Optional[None]
+    fast_inference: None
     save_predict: bool
 
 
@@ -139,34 +139,34 @@ class TrainConfig:
 
 @dataclass
 class Config:
-    task: Union[TrainConfig, InferenceConfig, ValidationConfig]
+    task: TrainConfig | InferenceConfig | ValidationConfig
     dataset: DatasetConfig
     model: ModelConfig
     name: str
 
-    device: Union[str, int, List[int]]
+    device: str | int | list[int]
     cpu_num: int
 
-    image_size: List[int]
+    image_size: list[int]
 
     out_path: str
     exist_ok: bool
 
-    lucky_number: 10
+    lucky_number: int
     use_wandb: bool
     use_tensorboard: bool
 
-    weight: Optional[str]
+    weight: str | None
 
 
 @dataclass
 class YOLOLayer(nn.Module):
-    source: Union[int, str, List[int]]
+    source: int | str | list[int]
     output: bool
     tags: str
     layer_type: str
     usable: bool
-    external: Optional[dict]
+    external: dict | None
 
 
 IDX_TO_ID = [

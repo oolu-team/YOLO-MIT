@@ -1,5 +1,3 @@
-from typing import List
-
 import numpy as np
 import torch
 from PIL import Image
@@ -9,7 +7,9 @@ from torchvision.transforms import functional as TF
 class AugmentationComposer:
     """Composes several transforms together."""
 
-    def __init__(self, transforms, image_size: int = [640, 640], base_size: int = 640):
+    def __init__(
+        self, transforms, image_size: tuple[int, int] = (640, 640), base_size: int = 640
+    ):
         self.transforms = transforms
         # TODO: handle List of image_size [640, 640]
         self.pad_resize = PadAndResize(image_size)
@@ -58,15 +58,15 @@ class RemoveOutliers:
 
 
 class PadAndResize:
-    def __init__(self, image_size, background_color=(114, 114, 114)):
+    def __init__(self, image_size: tuple[int, int], background_color=(114, 114, 114)):
         """Initialize the object with the target image size."""
         self.target_width, self.target_height = image_size
         self.background_color = background_color
 
-    def set_size(self, image_size: List[int]):
+    def set_size(self, image_size: tuple[int, int]):
         self.target_width, self.target_height = image_size
 
-    def __call__(self, image: Image, boxes):
+    def __call__(self, image: Image.Image, boxes):
         img_width, img_height = image.size
         scale = min(self.target_width / img_width, self.target_height / img_height)
         new_width, new_height = int(img_width * scale), int(img_height * scale)
@@ -211,8 +211,8 @@ class RandomCrop:
         if torch.rand(1) < self.prob:
             original_width, original_height = image.size
             crop_height, crop_width = original_height // 2, original_width // 2
-            top = torch.randint(0, original_height - crop_height + 1, (1,)).item()
-            left = torch.randint(0, original_width - crop_width + 1, (1,)).item()
+            top = int(torch.randint(0, original_height - crop_height + 1, (1,)).item())
+            left = int(torch.randint(0, original_width - crop_width + 1, (1,)).item())
 
             image = TF.crop(image, top, left, crop_height, crop_width)
 

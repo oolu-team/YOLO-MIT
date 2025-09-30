@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import torch
 import torch.nn.functional as F
@@ -111,8 +111,8 @@ class YOLOLoss:
         return anchors_cls, anchors_box
 
     def __call__(
-        self, predicts: List[Tensor], targets: Tensor
-    ) -> Tuple[Tensor, Tensor, Tensor]:
+        self, predicts: list[Tensor], targets: Tensor
+    ) -> tuple[Tensor, Tensor, Tensor]:
         predicts_cls, predicts_anc, predicts_box = predicts
         # For each predicted targets, assign a best suitable ground truth box.
         align_targets, valid_masks = self.matcher(
@@ -152,8 +152,8 @@ class DualLoss:
         self.cls_rate = loss_cfg.objective["BCELoss"]
 
     def __call__(
-        self, aux_predicts: List[Tensor], main_predicts: List[Tensor], targets: Tensor
-    ) -> Tuple[Tensor, Dict[str, float]]:
+        self, aux_predicts: list[Tensor], main_predicts: list[Tensor], targets: Tensor
+    ) -> tuple[Tensor, dict[str, float]]:
         # TODO: Need Refactor this region, make it flexible!
         aux_iou, aux_dfl, aux_cls = self.loss(aux_predicts, targets)
         main_iou, main_dfl, main_cls = self.loss(main_predicts, targets)

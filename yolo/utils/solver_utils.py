@@ -1,6 +1,5 @@
 import contextlib
 import io
-from typing import Dict
 
 import numpy as np
 from pycocotools.coco import COCO
@@ -18,7 +17,7 @@ def calculate_ap(coco_gt: COCO, pd_path):
     return coco_eval.stats
 
 
-def make_ap_table(score: Dict[str, float], past_result=[], max_result=None, epoch=-1):
+def make_ap_table(score: dict[str, float], past_result=[], max_result=None, epoch=-1):
     ap_table = Table()
     ap_table.add_column("Epoch", justify="center", style="white", width=5)
     ap_table.add_column("Avg. Precision", justify="left", style="cyan")

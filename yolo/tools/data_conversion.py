@@ -1,11 +1,10 @@
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from rich.progress import track
 
 
-def discretize_categories(categories: List[Dict[str, int]]) -> Dict[int, int]:
+def discretize_categories(categories: list[dict[str, int]]) -> dict[int, int]:
     """
     Maps each unique 'id' in the list of category dictionaries to a sequential integer index.
     Indices are assigned based on the sorted 'id' values.
@@ -15,10 +14,10 @@ def discretize_categories(categories: List[Dict[str, int]]) -> Dict[int, int]:
 
 
 def process_annotations(
-    image_annotations: Dict[int, List[Dict]],
-    image_info_dict: Dict[int, tuple],
+    image_annotations: dict[int, list[dict]],
+    image_info_dict: dict[int, tuple],
     output_dir: Path,
-    id_to_idx: Optional[Dict[int, int]] = None,
+    id_to_idx: dict[int, int] | None = None,
 ) -> None:
     """
     Process and save annotations to files, with option to remap category IDs.
@@ -37,7 +36,7 @@ def process_annotations(
 
 
 def process_annotation(
-    annotation: Dict, image_dims: tuple, id_to_idx: Optional[Dict[int, int]], file
+    annotation: dict, image_dims: tuple, id_to_idx: dict[int, int] | None, file
 ) -> None:
     """
     Convert a single annotation's segmentation and write it to the open file handle.
@@ -65,8 +64,8 @@ def process_annotation(
 
 
 def normalize_segmentation(
-    segmentation: List[float], img_width: int, img_height: int
-) -> List[str]:
+    segmentation: list[float], img_width: int, img_height: int
+) -> list[str]:
     """
     Normalize and format segmentation coordinates.
     """
@@ -84,7 +83,8 @@ def convert_annotations(json_file: str, output_dir: str) -> None:
     with open(json_file) as file:
         data = json.load(file)
 
-    Path(output_dir).mkdir(exist_ok=True)
+    output_path = Path(output_dir)
+    output_path.mkdir(exist_ok=True)
 
     image_info_dict = {
         img["id"]: (img["width"], img["height"]) for img in data.get("images", [])
@@ -100,7 +100,7 @@ def convert_annotations(json_file: str, output_dir: str) -> None:
         if not annotation.get("iscrowd", False):
             image_annotations[annotation["image_id"]].append(annotation)
 
-    process_annotations(image_annotations, image_info_dict, output_dir, id_to_idx)
+    process_annotations(image_annotations, image_info_dict, output_path, id_to_idx)
 
 
 if __name__ == "__main__":

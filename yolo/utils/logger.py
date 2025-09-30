@@ -1,6 +1,6 @@
 import logging
 
-from lightning.pytorch.utilities.rank_zero import rank_zero_only
+from lightning_utilities.core.rank_zero import rank_zero_only
 from rich.console import Console
 from rich.logging import RichHandler
 

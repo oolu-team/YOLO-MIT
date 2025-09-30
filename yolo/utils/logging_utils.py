@@ -15,7 +15,7 @@ import logging
 from collections import deque
 from logging import FileHandler
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 import torch
@@ -190,11 +190,11 @@ class YOLORichModelSummary(RichModelSummary):
     @staticmethod
     @override
     def summarize(
-        summary_data: List[Tuple[str, List[str]]],
+        summary_data: list[tuple[str, list[str]]],
         total_parameters: int,
         trainable_parameters: int,
         model_size: float,
-        total_training_modes: Dict[str, int],
+        total_training_modes: dict[str, int],
         **summarize_kwargs: Any,
     ) -> None:
         from lightning.pytorch.utilities.model_summary.model_summary import (
@@ -328,7 +328,7 @@ def setup(cfg: Config):
     return progress, loggers, save_path
 
 
-def log_model_structure(model: Union[ModuleList, YOLOLayer, YOLO]):
+def log_model_structure(model: ModuleList | YOLOLayer | YOLO):
     if isinstance(model, YOLO):
         model = model.model
     console = Console()
@@ -386,8 +386,8 @@ def validate_log_directory(cfg: Config, exp_name: str) -> Path:
 
 def log_bbox(
     bboxes: Tensor,
-    class_list: Optional[List[str]] = None,
-    image_size: Tuple[int, int] = (640, 640),
+    class_list: list[str] | None = None,
+    image_size: tuple[int, int] = (640, 640),
 ) -> dict:
     """
     Convert bounding boxes tensor to a list of dictionaries for logging, normalized by the image size.

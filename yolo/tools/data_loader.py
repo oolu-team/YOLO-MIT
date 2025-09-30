@@ -2,7 +2,7 @@ from pathlib import Path
 from queue import Empty, Queue
 from statistics import mean
 from threading import Event, Thread
-from typing import Generator, List, Tuple, Union
+from typing import Generator
 
 import numpy as np
 import torch
@@ -12,14 +12,13 @@ from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 
 from yolo.config.config import DataConfig, DatasetConfig
-from yolo.tools.data_augmentation import *
 from yolo.tools.data_augmentation import AugmentationComposer
 from yolo.tools.dataset_preparation import prepare_dataset
 from yolo.utils.dataset_utils import (
     create_image_metadata,
     locate_label_paths,
     scale_segmentation,
-    tensorlize,
+    tensorize,
 )
 from yolo.utils.logger import logger
 
@@ -40,7 +39,7 @@ class YoloDataset(Dataset):
             transforms, self.image_size, self.base_size
         )
         self.transform.get_more_data = self.get_more_data
-        self.img_paths, self.bboxes, self.ratios = tensorlize(
+        self.img_paths, self.bboxes, self.ratios = tensorize(
             self.load_data(Path(dataset_cfg.path), phase_name)
         )
 
@@ -159,7 +158,7 @@ class YoloDataset(Dataset):
 
     def load_valid_labels(
         self, label_path: str, seg_data_one_img: list
-    ) -> Union[Tensor, None]:
+    ) -> Tensor | None:
         """
         Loads valid COCO style segmentation data (values between [0, 1]) and converts it to bounding box coordinates
         by finding the minimum and maximum x and y values.
@@ -223,7 +222,7 @@ class YoloDataset(Dataset):
         return len(self.bboxes)
 
 
-def collate_fn(batch: List[Tuple[Tensor, Tensor]]) -> Tuple[Tensor, List[Tensor]]:
+def collate_fn(batch: list[tuple[Tensor, Tensor]]) -> tuple[Tensor, list[Tensor]]:
     """
     A collate function to handle batching of images and their corresponding targets.
 
