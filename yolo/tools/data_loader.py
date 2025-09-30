@@ -207,7 +207,7 @@ class YoloDataset(Dataset):
         self.image_size = [int(self.base_size + shift), int(self.base_size - shift)]
         self.transform.pad_resize.set_size(self.image_size)
 
-    def __getitem__(self, idx) -> Tuple[Image.Image, Tensor, Tensor, List[str]]:
+    def __getitem__(self, idx) -> tuple[Image.Image, Tensor, Tensor, list[str]]:
         img, bboxes, img_path = self.get_data(idx)
 
         if self.dynamic_shape:

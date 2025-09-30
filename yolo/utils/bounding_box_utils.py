@@ -225,7 +225,7 @@ class BoxMatcher:
 
     def filter_topk(
         self, target_matrix: Tensor, grid_mask: Tensor, topk: int = 10
-    ) -> Tuple[Tensor, Tensor]:
+    ) -> tuple[Tensor, Tensor]:
         """
         Filter the top-k suitability of targets for each anchor.
 
@@ -510,9 +510,7 @@ class Anc2Box:
         return preds_cls, None, preds_box, preds_cnf.sigmoid()
 
 
-def create_converter(
-    model_version: str = "v9-c", *args, **kwargs
-) -> Union[Anc2Box, Vec2Box]:
+def create_converter(model_version: str = "v9-c", *args, **kwargs) -> Anc2Box | Vec2Box:
     if "v7" in model_version:  # check model if v7
         converter = Anc2Box(*args, **kwargs)
     else:

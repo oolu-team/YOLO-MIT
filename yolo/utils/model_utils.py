@@ -193,7 +193,7 @@ class PostProcess:
         predict,
         rev_tensor: Tensor | None = None,
         image_size: list[int] | None = None,
-    ) -> List[Tensor]:
+    ) -> list[Tensor]:
         if image_size is not None:
             self.converter.update(image_size)
         prediction = self.converter(predict["Main"])
