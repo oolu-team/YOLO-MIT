@@ -1,3 +1,4 @@
+import logging
 import random
 
 import numpy as np
@@ -7,7 +8,8 @@ from torchvision.transforms.functional import to_pil_image
 
 from yolo.config.config import ModelConfig
 from yolo.model.yolo import YOLO
-from yolo.utils.logger import logger
+
+logger = logging.getLogger("yolo")
 
 
 def draw_bboxes(

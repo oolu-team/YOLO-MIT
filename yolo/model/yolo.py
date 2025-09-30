@@ -24,7 +24,7 @@ class YOLO(nn.Module):
         super(YOLO, self).__init__()
         self.num_classes = class_num
         self.layer_map = get_layer_map()  # Get the map Dict[str: Module]
-        self.model: List[YOLOLayer] = nn.ModuleList()
+        self.model: list[YOLOLayer] = nn.ModuleList()
         self.reg_max = getattr(model_cfg.anchor, "reg_max", 16)
         self.build_model(model_cfg.model)
 
