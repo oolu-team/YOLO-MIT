@@ -1,18 +1,11 @@
-import sys
-from pathlib import Path
-
 import torch
 from PIL import Image
 from torchvision.transforms import functional as TF
-
-project_root = Path(__file__).resolve().parent.parent.parent
-sys.path.append(str(project_root))
 
 from yolo.tools.data_augmentation import (
     AugmentationComposer,
     HorizontalFlip,
     Mosaic,
-    VerticalFlip,
 )
 
 
@@ -29,7 +22,9 @@ def test_horizontal_flip():
 
     # Assert bounding boxes are flipped correctly
     expected_boxes = torch.tensor([[1, 0.3, 0.1, 0.95, 0.9]])
-    assert torch.allclose(flipped_boxes, expected_boxes), "Bounding boxes were not flipped correctly"
+    assert torch.allclose(flipped_boxes, expected_boxes), (
+        "Bounding boxes were not flipped correctly"
+    )
 
 
 def test_compose():

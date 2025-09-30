@@ -1,13 +1,6 @@
-import sys
-from math import isinf, isnan
-from pathlib import Path
-
 import pytest
 import torch
 from hydra import compose, initialize
-
-project_root = Path(__file__).resolve().parent.parent.parent
-sys.path.append(str(project_root))
 
 from yolo.config.config import Config
 from yolo.model.yolo import create_model
@@ -44,7 +37,9 @@ def loss_function(cfg, vec2box) -> DualLoss:
 def data():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     targets = torch.zeros(1, 20, 5, device=device)
-    predicts = [torch.zeros(1, 8400, *cn, device=device) for cn in [(80,), (4, 16), (4,)]]
+    predicts = [
+        torch.zeros(1, 8400, *cn, device=device) for cn in [(80,), (4, 16), (4,)]
+    ]
     return predicts, targets
 
 

@@ -1,12 +1,8 @@
 import re
-import sys
-from pathlib import Path
 
 import pytest
 from torch import nn
 
-project_root = Path(__file__).resolve().parent.parent.parent
-sys.path.append(str(project_root))
 from yolo.utils.module_utils import (
     auto_pad,
     create_activation_function,
@@ -25,16 +21,26 @@ from yolo.utils.module_utils import (
     ],
 )
 def test_auto_pad(kernel_size, dilation, expected):
-    assert auto_pad(kernel_size, dilation) == expected, "auto_pad does not calculate padding correctly"
+    assert auto_pad(kernel_size, dilation) == expected, (
+        "auto_pad does not calculate padding correctly"
+    )
 
 
 @pytest.mark.parametrize(
     "activation_name, expected_type",
-    [("ReLU", nn.ReLU), ("leakyrelu", nn.LeakyReLU), ("none", nn.Identity), (None, nn.Identity), (False, nn.Identity)],
+    [
+        ("ReLU", nn.ReLU),
+        ("leakyrelu", nn.LeakyReLU),
+        ("none", nn.Identity),
+        (None, nn.Identity),
+        (False, nn.Identity),
+    ],
 )
 def test_get_activation(activation_name, expected_type):
     result = create_activation_function(activation_name)
-    assert isinstance(result, expected_type), f"get_activation does not return correct type for {activation_name}"
+    assert isinstance(result, expected_type), (
+        f"get_activation does not return correct type for {activation_name}"
+    )
 
 
 def test_get_activation_invalid():
@@ -54,7 +60,9 @@ def test_divide_into_chunks_non_divisible_length():
     chunk_num = 4
     with pytest.raises(
         ValueError,
-        match=re.escape("The length of the input list (6) must be exactly divisible by the number of chunks (4)."),
+        match=re.escape(
+            "The length of the input list (6) must be exactly divisible by the number of chunks (4)."
+        ),
     ):
         divide_into_chunks(input_list, chunk_num)
 

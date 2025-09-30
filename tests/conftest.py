@@ -1,23 +1,20 @@
-import sys
-from pathlib import Path
-
 import pytest
 import torch
 from hydra import compose, initialize
 from lightning import Trainer
 
-project_root = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_root))
-
-from yolo import Anc2Box, Config, Vec2Box, create_converter, create_model
-from yolo.model.yolo import YOLO
+from yolo.config.config import Config
+from yolo.model.yolo import YOLO, create_model
 from yolo.tools.data_loader import StreamDataLoader, create_dataloader
 from yolo.tools.dataset_preparation import prepare_dataset
+from yolo.utils.bounding_box_utils import Anc2Box, Vec2Box, create_converter
 from yolo.utils.logging_utils import set_seed, setup
 
 
 def pytest_configure(config):
-    config.addinivalue_line("markers", "requires_cuda: mark test to run only if CUDA is available")
+    config.addinivalue_line(
+        "markers", "requires_cuda: mark test to run only if CUDA is available"
+    )
 
 
 def get_cfg(overrides=[]) -> Config:
@@ -85,14 +82,24 @@ def solver(train_cfg: Config) -> Trainer:
 
 @pytest.fixture(scope="session")
 def vec2box(train_cfg: Config, model: YOLO, device) -> Vec2Box:
-    vec2box = create_converter(train_cfg.model.name, model, train_cfg.model.anchor, train_cfg.image_size, device)
+    vec2box = create_converter(
+        train_cfg.model.name,
+        model,
+        train_cfg.model.anchor,
+        train_cfg.image_size,
+        device,
+    )
     return vec2box
 
 
 @pytest.fixture(scope="session")
 def anc2box(inference_v7_cfg: Config, model: YOLO, device) -> Anc2Box:
     anc2box = create_converter(
-        inference_v7_cfg.model.name, model, inference_v7_cfg.model.anchor, inference_v7_cfg.image_size, device
+        inference_v7_cfg.model.name,
+        model,
+        inference_v7_cfg.model.anchor,
+        inference_v7_cfg.image_size,
+        device,
     )
     return anc2box
 
@@ -100,13 +107,17 @@ def anc2box(inference_v7_cfg: Config, model: YOLO, device) -> Anc2Box:
 @pytest.fixture(scope="session")
 def train_dataloader(train_cfg: Config):
     prepare_dataset(train_cfg.dataset, task="train")
-    return create_dataloader(train_cfg.task.data, train_cfg.dataset, train_cfg.task.task)
+    return create_dataloader(
+        train_cfg.task.data, train_cfg.dataset, train_cfg.task.task
+    )
 
 
 @pytest.fixture(scope="session")
 def validation_dataloader(validation_cfg: Config):
     prepare_dataset(validation_cfg.dataset, task="val")
-    return create_dataloader(validation_cfg.task.data, validation_cfg.dataset, validation_cfg.task.task)
+    return create_dataloader(
+        validation_cfg.task.data, validation_cfg.dataset, validation_cfg.task.task
+    )
 
 
 @pytest.fixture(scope="session")

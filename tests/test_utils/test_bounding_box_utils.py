@@ -1,15 +1,10 @@
-import sys
-from pathlib import Path
-
 import pytest
 import torch
 from hydra import compose, initialize
 from torch import allclose, float32, isclose, tensor
 
-project_root = Path(__file__).resolve().parent.parent.parent
-sys.path.append(str(project_root))
-from yolo import Config, NMSConfig, create_model
-from yolo.config.config import AnchorConfig
+from yolo.config.config import AnchorConfig, Config, NMSConfig
+from yolo.model.yolo import create_model
 from yolo.utils.bounding_box_utils import (
     Anc2Box,
     Vec2Box,
@@ -221,12 +216,16 @@ def test_bbox_nms():
 
 
 def test_calculate_map():
-    predictions = tensor([[0, 60, 60, 160, 160, 0.5], [0, 40, 40, 120, 120, 0.5]])  # [class, x1, y1, x2, y2]
-    ground_truths = tensor([[0, 50, 50, 150, 150], [0, 30, 30, 100, 100]])  # [class, x1, y1, x2, y2]
+    predictions = tensor(
+        [[0, 60, 60, 160, 160, 0.5], [0, 40, 40, 120, 120, 0.5]]
+    )  # [class, x1, y1, x2, y2]
+    ground_truths = tensor(
+        [[0, 50, 50, 150, 150], [0, 30, 30, 100, 100]]
+    )  # [class, x1, y1, x2, y2]
 
     mAP = calculate_map(predictions, ground_truths)
     expected_ap50 = tensor(0.5050)
     expected_ap50_95 = tensor(0.2020)
 
-    assert isclose(mAP["map_50"], expected_ap50, atol=1e-4), f"AP50 mismatch"
-    assert isclose(mAP["map"], expected_ap50_95, atol=1e-4), f"Mean AP mismatch"
+    assert isclose(mAP["map_50"], expected_ap50, atol=1e-4), "AP50 mismatch"
+    assert isclose(mAP["map"], expected_ap50_95, atol=1e-4), "Mean AP mismatch"
