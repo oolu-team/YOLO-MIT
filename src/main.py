@@ -1,79 +1,12 @@
 import logging
 from pathlib import Path
 
-from lightning import LightningModule, Trainer
-from PIL import Image
+from lightning import Trainer
 from pydantic import TypeAdapter
 from rich.logging import RichHandler
 
 from src.config.config import ModelConfig, NMSConfig, class_list
-from src.model.yolo import YOLO
-from src.tools.data_loader import FileDataLoader
-from src.tools.drawer import draw_bboxes
-from src.utils.bounding_box_utils import Vec2Box
-from src.utils.model_utils import PostProcess
-
-
-class BaseModule(LightningModule):
-    def __init__(self, model: ModelConfig, class_num: int):
-        super().__init__()
-        self.model = YOLO(model, class_num=class_num)
-
-    def forward(self, x):
-        return self.model(x)
-
-
-class InferenceModel(BaseModule):
-    def __init__(
-        self,
-        model_config: ModelConfig,
-        class_list: list[str],
-        source: str,
-        image_size: tuple[int, int],
-        nms_config: NMSConfig,
-    ):
-        super().__init__(model_config, class_num=len(class_list))
-        self.anchor_config = model_config["anchor"]
-        self.class_list = class_list
-        self.nms_config = nms_config
-        self.image_size = image_size
-
-        self._save_predict = True
-        # TODO: Add FastModel
-
-        self.predict_loader = FileDataLoader(source=source, image_size=image_size)
-
-    def setup(self, stage):
-        self.vec2box = Vec2Box(
-            self.model,
-            self.anchor_config,
-            self.image_size,
-            self.device,
-        )
-        self.post_process = PostProcess(self.vec2box, self.nms_config)
-
-    def predict_dataloader(self):
-        return self.predict_loader
-
-    def predict_step(self, batch, batch_idx: int):
-        images, rev_tensor, origin_frame = batch
-        predicts = self.post_process(self(images), rev_tensor=rev_tensor)
-        img = draw_bboxes(origin_frame, predicts, idx2label=self.class_list)
-        if getattr(self.predict_loader, "is_stream", None):
-            # fps = self._display_stream(img)
-            raise NotImplementedError("stream case")
-        else:
-            fps = None
-        if self._save_predict:
-            self._save_image(img, batch_idx)
-        return img, fps
-
-    def _save_image(self, img: Image.Image, batch_idx: int):
-        save_image_path = (
-            Path(self.trainer.default_root_dir) / f"frame{batch_idx:03d}.png"
-        )
-        img.save(save_image_path)
-        print(f"💾 Saved visualize image at {save_image_path}")
+from src.tools.solver import InferenceModel
 
 
 def _setup_logger(logger_name: str, quite=False):
@@ -92,9 +25,6 @@ def _setup_logger(logger_name: str, quite=False):
 def init_logger(quite: bool = False):
     _setup_logger("lightning.pytorch")
     _setup_logger("lightning.fabric")
-
-    coco_logger = logging.getLogger("faster_coco_eval.core.cocoeval")
-    coco_logger.setLevel(logging.ERROR)
 
     logger = _setup_logger("yolo")
     logger.propagate = False

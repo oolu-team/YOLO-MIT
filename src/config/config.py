@@ -1,4 +1,4 @@
-from typing import NotRequired, TypedDict
+from typing import TypedDict
 
 from pydantic import BaseModel
 
@@ -6,8 +6,6 @@ from pydantic import BaseModel
 class AnchorConfig(TypedDict):
     strides: list[int]
     reg_max: int | None
-    anchor_num: NotRequired[int]
-    anchor: NotRequired[list[list[int]]]
 
 
 class LayerConfig(TypedDict, total=False):

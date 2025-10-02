@@ -1,6 +1,8 @@
 import logging
+from pathlib import Path
 from typing import MutableSequence, cast
 
+import torch
 from torch import nn
 
 from src.config.config import BlockConfig, LayerConfig, ModelConfig
@@ -77,7 +79,7 @@ class YOLO(nn.Module):
                 layer = self.create_layer(layer_type, source, layer_info, **layer_args)
                 if layer.tags:
                     if layer.tags in self.layer_index:
-                        raise ValueError(f"Duplicate tag '{layer_info['tags']}' found.")
+                        raise ValueError(f"Duplicate tag '{layer.tags}' found.")
                     self.layer_index[layer.tags] = layer_idx
 
                 out_channels = self.get_out_channels(
@@ -172,3 +174,49 @@ class YOLO(nn.Module):
             return layer
         else:
             raise ValueError(f"Unsupported layer type: {layer_type}")
+
+    def save_load_weight(self, weights: Path):
+        """
+        Update the model's weights with the provided weights.
+
+        args:
+            weights: A OrderedDict containing the new weights.
+        """
+        if isinstance(weights, Path):
+            weights = torch.load(
+                weights, map_location=torch.device("cpu"), weights_only=False
+            )
+        if "state_dict" in weights:
+            weights = {
+                name.removeprefix("model.model."): key
+                for name, key in weights["state_dict"].items()
+            }
+        model_state_dict = self.model.state_dict()
+
+        # TODO1: autoload old version weight
+        # TODO2: weight transform if num_class difference
+
+        error_dict = {"Mismatch": set(), "Not Found": set()}
+        for model_key, model_weight in model_state_dict.items():
+            if model_key not in weights:
+                error_dict["Not Found"].add(tuple(model_key.split(".")[:-2]))
+                continue
+            if model_weight.shape != weights[model_key].shape:
+                error_dict["Mismatch"].add(tuple(model_key.split(".")[:-2]))
+                continue
+            model_state_dict[model_key] = weights[model_key]
+
+        for error_name, error_set in error_dict.items():
+            error_dict = dict()
+            for layer_idx, *layer_name in error_set:
+                if layer_idx not in error_dict:
+                    error_dict[layer_idx] = [".".join(layer_name)]
+                else:
+                    error_dict[layer_idx].append(".".join(layer_name))
+            for layer_idx, layer_name in error_dict.items():
+                layer_name.sort()
+                logger.warning(
+                    f":warning: Weight {error_name} for Layer {layer_idx}: {', '.join(layer_name)}"
+                )
+
+        self.model.load_state_dict(model_state_dict)

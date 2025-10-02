@@ -4,7 +4,7 @@ import torch
 from einops import rearrange
 from torchvision.ops import batched_nms
 
-from src.config.config import AnchorConfig, NMSConfig
+from src.config.config import NMSConfig
 from src.model.yolo import YOLO
 
 logger = logging.getLogger("yolo")
@@ -75,25 +75,16 @@ def generate_anchors(image_size: list[int], strides: list[int]):
 
 
 class Vec2Box:
-    def __init__(self, model: YOLO, anchor_cfg: AnchorConfig, image_size, device):
+    def __init__(self, strides: list[int], image_size, device):
+        self.strides = strides
         self.device = device
-
-        if "strides" in anchor_cfg:
-            logger.info(
-                f":japanese_not_free_of_charge_button: Found stride of model {anchor_cfg['strides']}"
-            )
-            self.strides = anchor_cfg["strides"]
-        else:
-            logger.info(
-                ":teddy_bear: Found no stride of model, performed a dummy test for auto-anchor size"
-            )
-            self.strides = self.create_auto_anchor(model, image_size)
 
         anchor_grid, scaler = generate_anchors(image_size, self.strides)
         self.image_size = image_size
         self.anchor_grid, self.scaler = anchor_grid.to(device), scaler.to(device)
 
-    def create_auto_anchor(self, model: YOLO, image_size):
+    @staticmethod
+    def create_auto_anchor(model: YOLO, image_size):
         W, H = image_size
         # TODO: need accelerate dummy test
         dummy_input = torch.zeros(1, 3, H, W)
