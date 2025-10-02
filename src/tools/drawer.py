@@ -10,10 +10,10 @@ logger = logging.getLogger("yolo")
 
 def draw_bboxes(
     img: Image.Image | torch.Tensor,
-    bboxes: list[list[int | float]],
+    bboxes: list[list[int | float]] | list[torch.Tensor],
     *,
     idx2label: list | None = None,
-):
+) -> Image.Image:
     """
     Draw bounding boxes on an image.
 
@@ -68,4 +68,4 @@ def draw_bboxes(
         draw.rounded_rectangle(text_background, fill=(*color_map, 175), radius=2)
         draw.text((x_min, y_min), label_text, fill="white", font=font)
 
-    return img
+    return pil_img
