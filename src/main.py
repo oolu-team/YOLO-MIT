@@ -1,10 +1,9 @@
 import logging
-import typing
 from pathlib import Path
 
 from lightning import LightningModule, Trainer
-from omegaconf import OmegaConf
 from PIL import Image
+from pydantic import TypeAdapter
 from rich.logging import RichHandler
 
 from src.config.config import ModelConfig, NMSConfig, class_list
@@ -15,7 +14,7 @@ from src.utils.bounding_box_utils import Vec2Box
 from src.utils.model_utils import PostProcess
 
 
-class BaseModel(LightningModule):
+class BaseModule(LightningModule):
     def __init__(self, model: ModelConfig, class_num: int):
         super().__init__()
         self.model = YOLO(model, class_num=class_num)
@@ -24,7 +23,7 @@ class BaseModel(LightningModule):
         return self.model(x)
 
 
-class InferenceModel(BaseModel):
+class InferenceModel(BaseModule):
     def __init__(
         self,
         model_config: ModelConfig,
@@ -34,7 +33,7 @@ class InferenceModel(BaseModel):
         nms_config: NMSConfig,
     ):
         super().__init__(model_config, class_num=len(class_list))
-        self.model_config = model_config
+        self.anchor_config = model_config["anchor"]
         self.class_list = class_list
         self.nms_config = nms_config
         self.image_size = image_size
@@ -47,7 +46,7 @@ class InferenceModel(BaseModel):
     def setup(self, stage):
         self.vec2box = Vec2Box(
             self.model,
-            self.model_config.anchor,
+            self.anchor_config,
             self.image_size,
             self.device,
         )
@@ -128,9 +127,11 @@ def main():
     )
     logger.info("Trainer initialized")
 
-    model_schema = OmegaConf.structured(ModelConfig)
-    model_conf = OmegaConf.load(f"src/config/model/{model_name}.yaml")
-    model_conf = typing.cast(ModelConfig, OmegaConf.merge(model_schema, model_conf))
+    with open(f"src/config/model/{model_name}.json", "r") as f:
+        model_conf = TypeAdapter(ModelConfig).validate_json(
+            f.read(),
+            strict=True,
+        )
 
     model = InferenceModel(
         model_conf,

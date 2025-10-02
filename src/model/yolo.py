@@ -1,7 +1,6 @@
 import logging
-from typing import cast
+from typing import MutableSequence, cast
 
-from omegaconf import ListConfig
 from torch import nn
 
 from src.config.config import BlockConfig, LayerConfig, ModelConfig
@@ -74,7 +73,6 @@ class YOLO(nn.Module):
                     layer_args["num_classes"] = self.num_classes
                     layer_args["reg_max"] = self.reg_max
 
-                # print(layer_idx, layer_type, layer_args, source)
                 # create layers
                 layer = self.create_layer(layer_type, source, layer_info, **layer_args)
                 if layer.tags:
@@ -85,7 +83,6 @@ class YOLO(nn.Module):
                 out_channels = self.get_out_channels(
                     layer_type, layer_args, output_dim, source
                 )
-                # print(out_channels)
                 output_dim.append(out_channels)
                 setattr(layer, "out_c", out_channels)
                 self.model.append(layer)
@@ -102,18 +99,22 @@ class YOLO(nn.Module):
             else:
                 model_input = y[layer.source]
 
-            external_input = {
-                source_name: y[source_name] for source_name in layer.external
-            }
+            external_input = (
+                {source_name: y[source_name] for source_name in layer.external}
+                if layer.external
+                else {}
+            )
 
             x = layer(model_input, **external_input)
             y[-1] = x
             if layer.usable:
                 y[index] = x
+
             if layer.output:
                 output[layer.tags] = x
                 if layer.tags == shortcut:
                     return output
+
         return output
 
     def get_out_channels(
@@ -149,7 +150,8 @@ class YOLO(nn.Module):
     def get_source_idx(
         self, source: int | str | list[int | str], layer_idx: int
     ) -> int | list[int]:
-        if isinstance(source, (list, ListConfig)):
+        # TODO: change to list (MutableSequence for ListConfig)
+        if isinstance(source, MutableSequence):
             return [self._get_source_idx(index, layer_idx) for index in source]
         return self._get_source_idx(source, layer_idx)
 

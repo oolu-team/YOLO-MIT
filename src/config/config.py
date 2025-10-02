@@ -1,39 +1,27 @@
-from dataclasses import dataclass
+from typing import NotRequired, TypedDict
 
 from pydantic import BaseModel
-from torch import nn
 
 
-@dataclass
-class YOLOLayer(nn.Module):
-    source: int | str | list[int]
-    output: bool
-    tags: str
-    layer_type: str
-    usable: bool
-    external: dict | None
-
-
-@dataclass
-class AnchorConfig:
+class AnchorConfig(TypedDict):
     strides: list[int]
     reg_max: int | None
-    anchor_num: int | None
-    anchor: list[list[int]]
+    anchor_num: NotRequired[int]
+    anchor: NotRequired[list[list[int]]]
 
 
-@dataclass
-class LayerConfig:
+class LayerConfig(TypedDict, total=False):
     args: dict
     source: int | str | list[str | int]
     tags: str
+    output: bool
+    external: list
 
 
 BlockConfig = list[dict[str, LayerConfig]]
 
 
-@dataclass
-class ModelConfig:
+class ModelConfig(TypedDict):
     name: str | None
     anchor: AnchorConfig
     model: dict[str, BlockConfig]

@@ -16,7 +16,7 @@ class PostProcess:
 
     def __call__(
         self,
-        predict,
+        predict: dict,
         rev_tensor: Tensor | None = None,
         image_size: list[int] | None = None,
     ) -> list[Tensor]:
