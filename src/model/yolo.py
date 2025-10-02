@@ -1,9 +1,7 @@
 import logging
-from collections import OrderedDict
-from pathlib import Path
+from typing import cast
 
-import torch
-from omegaconf import ListConfig, OmegaConf
+from omegaconf import ListConfig
 from torch import nn
 
 from src.config.config import BlockConfig, LayerConfig, ModelConfig, YOLOLayer
@@ -26,7 +24,8 @@ class YOLO(nn.Module):
 
         self.num_classes = class_num
         self.layer_map = get_layer_map()  # Get the map Dict[str: Module]
-        self.model: list[YOLOLayer] = nn.ModuleList()
+        self.model = nn.ModuleList()
+
         self.reg_max = getattr(model_cfg.anchor, "reg_max", 16)
         self.build_model(model_cfg.model)
 
@@ -51,6 +50,7 @@ class YOLO(nn.Module):
                     module in layer_type
                     for module in ["Conv", "ELAN", "ADown", "AConv", "CBLinear"]
                 ):
+                    assert not isinstance(source, list)
                     layer_args["in_channels"] = output_dim[source]
                 if any(
                     module in layer_type
@@ -83,6 +83,7 @@ class YOLO(nn.Module):
         y = {0: x, **(external or {})}
         output = dict()
         for index, layer in enumerate(self.model, start=1):
+            layer = cast(YOLOLayer, layer)
             if isinstance(layer.source, list):
                 model_input = [y[idx] for idx in layer.source]
             else:
@@ -112,22 +113,32 @@ class YOLO(nn.Module):
         if hasattr(layer_args, "out_channels"):
             return layer_args["out_channels"]
         if layer_type == "CBFuse":
+            assert isinstance(source, list)
             return output_dim[source[-1]]
         if isinstance(source, int):
             return output_dim[source]
         if isinstance(source, list):
             return sum(output_dim[idx] for idx in source)
 
-    def get_source_idx(self, source: list | str | int, layer_idx: int):
-        if isinstance(source, ListConfig):
-            return [self.get_source_idx(index, layer_idx) for index in source]
+    def _get_source_idx(self, source: int | str, layer_idx: int) -> int:
         if isinstance(source, str):
             source = self.layer_index[source]
+        assert not isinstance(source, str)
+
         if source < -1:
             source += layer_idx
         if source > 0:  # Using Previous Layer's Output
-            self.model[source - 1].usable = True
+            layer = cast(YOLOLayer, self.model[source - 1])
+            layer.usable = True
         return source
+
+    def get_source_idx(
+        self, source: int | str | list[int | str], layer_idx: int
+    ) -> int | list[int]:
+        if isinstance(source, ListConfig):
+            return [self._get_source_idx(index, layer_idx) for index in source]
+        assert not isinstance(source, list)
+        return self._get_source_idx(source, layer_idx)
 
     def create_layer(
         self, layer_type: str, source: int | list, layer_info: LayerConfig, **kwargs
@@ -146,67 +157,3 @@ class YOLO(nn.Module):
             return layer
         else:
             raise ValueError(f"Unsupported layer type: {layer_type}")
-
-    def save_load_weights(self, weights: list[Path | OrderedDict]):
-        """
-        Update the model's weights with the provided weights.
-
-        args:
-            weights: A OrderedDict containing the new weights.
-        """
-        if isinstance(weights, Path):
-            weights = torch.load(
-                weights, map_location=torch.device("cpu"), weights_only=False
-            )
-        if "state_dict" in weights:
-            weights = {
-                name.removeprefix("model.model."): key
-                for name, key in weights["state_dict"].items()
-            }
-        model_state_dict = self.model.state_dict()
-
-        # TODO1: autoload old version weight
-        # TODO2: weight transform if num_class difference
-
-        error_dict = {"Mismatch": set(), "Not Found": set()}
-        for model_key, model_weight in model_state_dict.items():
-            if model_key not in weights:
-                error_dict["Not Found"].add(tuple(model_key.split(".")[:-2]))
-                continue
-            if model_weight.shape != weights[model_key].shape:
-                error_dict["Mismatch"].add(tuple(model_key.split(".")[:-2]))
-                continue
-            model_state_dict[model_key] = weights[model_key]
-
-        for error_name, error_set in error_dict.items():
-            error_dict = dict()
-            for layer_idx, *layer_name in error_set:
-                if layer_idx not in error_dict:
-                    error_dict[layer_idx] = [".".join(layer_name)]
-                else:
-                    error_dict[layer_idx].append(".".join(layer_name))
-            for layer_idx, layer_name in error_dict.items():
-                layer_name.sort()
-                logger.warning(
-                    f":warning: Weight {error_name} for Layer {layer_idx}: {', '.join(layer_name)}"
-                )
-
-        self.model.load_state_dict(model_state_dict)
-
-
-def create_model(model_cfg: ModelConfig, class_num: int = 80) -> YOLO:
-    """Constructs and returns a model from a Dictionary configuration file.
-
-    Args:
-        config_file (dict): The configuration file of the model.
-
-    Returns:
-        YOLO: An instance of the model defined by the given configuration.
-    """
-    OmegaConf.set_struct(model_cfg, False)
-    model = YOLO(model_cfg, class_num)
-    weight_path = Path("weights") / f"{model_cfg.name}.pt"
-    assert weight_path.exists(), f"Weight {weight_path} not found, please check"
-    model.save_load_weights(weight_path)
-    logger.info(":white_check_mark: Success load model & weight")
-    return model
