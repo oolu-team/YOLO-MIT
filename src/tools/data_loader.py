@@ -9,20 +9,23 @@ import torch
 from PIL import Image
 from torch import Tensor
 
-from src.config.config import DataConfig
 from src.tools.data_augmentation import AugmentationComposer
 
 
 class StreamDataLoader:
-    def __init__(self, data_cfg: DataConfig):
-        self.source = data_cfg.source
+    def __init__(self, source: str, image_size: tuple[int, int]):
+        self.source = source
         assert self.source is not None
-        self.running = True
-        self.is_stream = isinstance(self.source, int) or str(
-            self.source
-        ).lower().startswith("rtmp://")
 
-        self.transform = AugmentationComposer([], data_cfg.image_size)
+        self.running = True
+
+        self.is_stream = False
+        # TODO: is_stream case
+        # self.is_stream = isinstance(self.source, int) or str(
+        #     self.source
+        # ).lower().startswith("rtmp://")
+
+        self.transform = AugmentationComposer([], image_size)
         self.stop_event = Event()
 
         if self.is_stream:

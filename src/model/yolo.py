@@ -6,7 +6,7 @@ import torch
 from omegaconf import ListConfig, OmegaConf
 from torch import nn
 
-from src.config.config import ModelConfig, YOLOLayer
+from src.config.config import BlockConfig, ModelConfig, YOLOLayer
 from src.utils.module_utils import get_layer_map
 
 logger = logging.getLogger("yolo")
@@ -23,13 +23,14 @@ class YOLO(nn.Module):
 
     def __init__(self, model_cfg: ModelConfig, class_num: int = 80):
         super(YOLO, self).__init__()
+
         self.num_classes = class_num
         self.layer_map = get_layer_map()  # Get the map Dict[str: Module]
         self.model: list[YOLOLayer] = nn.ModuleList()
         self.reg_max = getattr(model_cfg.anchor, "reg_max", 16)
         self.build_model(model_cfg.model)
 
-    def build_model(self, model_arch: dict[str, list[dict[str, dict[str, dict]]]]):
+    def build_model(self, model_arch: dict[str, BlockConfig]):
         self.layer_index = {}
         output_dim, layer_idx = [3], 1
         logger.info(":tractor: Building YOLO")

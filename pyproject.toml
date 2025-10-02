@@ -18,6 +18,8 @@ dependencies = [
     "opencv-python",
     "pillow",
     "pycocotools",
+    "pydantic>=2.11.9",
+    "pydantic-settings>=2.11.0",
     "requests",
     "rich",
     "torch",
