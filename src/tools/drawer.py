@@ -22,19 +22,19 @@ def draw_bboxes(
     - bboxes (List of Lists/Tensors): Bounding boxes with [class_id, x_min, y_min, x_max, y_max],
       where coordinates are normalized [0, 1].
     """
-    # Convert tensor image to PIL Image if necessary
-    if isinstance(img, torch.Tensor):
+    if isinstance(img, Image.Image):
+        pil_img = img.copy()
+    else:
         if img.dim() > 3:
             logger.warning("🔍 >3 dimension tensor detected, using the 0-idx image.")
             img = img[0]
-        img = to_pil_image(img)
+        pil_img = to_pil_image(img).copy()
 
     if isinstance(bboxes, list) or bboxes.ndim == 3:
-        bboxes = bboxes[0]
+        bboxes = bboxes[0]  # pyright: ignore[reportAssignmentType]
 
-    img = img.copy()
-    label_size = img.size[1] / 30
-    draw = ImageDraw.Draw(img, "RGBA")
+    label_size = pil_img.size[1] / 30
+    draw = ImageDraw.Draw(pil_img, "RGBA")
 
     try:
         font = ImageFont.truetype("arial.ttf", int(label_size))

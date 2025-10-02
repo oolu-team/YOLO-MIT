@@ -6,7 +6,7 @@ import torch
 from omegaconf import ListConfig, OmegaConf
 from torch import nn
 
-from src.config.config import BlockConfig, ModelConfig, YOLOLayer
+from src.config.config import BlockConfig, LayerConfig, ModelConfig, YOLOLayer
 from src.utils.module_utils import get_layer_map
 
 logger = logging.getLogger("yolo")
@@ -130,15 +130,17 @@ class YOLO(nn.Module):
         return source
 
     def create_layer(
-        self, layer_type: str, source: int | list, layer_info: dict, **kwargs
+        self, layer_type: str, source: int | list, layer_info: LayerConfig, **kwargs
     ) -> YOLOLayer:
         if layer_type in self.layer_map:
             layer = self.layer_map[layer_type](**kwargs)
             setattr(layer, "layer_type", layer_type)
             setattr(layer, "source", source)
             setattr(layer, "in_c", kwargs.get("in_channels", None))
-            setattr(layer, "output", layer_info.get("output", False))
             setattr(layer, "tags", layer_info.get("tags", None))
+            # setattr(layer, "output", False)
+            setattr(layer, "output", layer_info.get("output", False))
+            # setattr(layer, "external", [])
             setattr(layer, "external", layer_info.get("external", []))
             setattr(layer, "usable", 0)
             return layer

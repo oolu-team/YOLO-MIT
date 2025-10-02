@@ -1,4 +1,5 @@
 import inspect
+from typing import overload
 
 from torch import Tensor, nn
 from torch.nn.common_types import _size_2_t
@@ -35,7 +36,7 @@ def auto_pad(
     return (pad_h, pad_w)
 
 
-def create_activation_function(activation: str) -> nn.Module:
+def create_activation_function(activation: str | None) -> nn.Module:
     """
     Retrieves an activation function from the PyTorch nn module based on its name, case-insensitively.
     """
@@ -51,6 +52,14 @@ def create_activation_function(activation: str) -> nn.Module:
         return activation_map[activation.lower()](inplace=True)
     else:
         raise ValueError(f"Activation function '{activation}' is not found in torch.nn")
+
+
+@overload
+def round_up(x: Tensor, div: int = 1) -> Tensor: ...
+
+
+@overload
+def round_up(x: int, div: int = 1) -> int: ...
 
 
 def round_up(x: int | Tensor, div: int = 1) -> int | Tensor:

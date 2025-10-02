@@ -9,7 +9,7 @@ from rich.logging import RichHandler
 
 from src.config.config import ModelConfig, NMSConfig
 from src.model.yolo import YOLO
-from src.tools.data_loader import StreamDataLoader
+from src.tools.data_loader import FileDataLoader
 from src.tools.drawer import draw_bboxes
 from src.utils.bounding_box_utils import Vec2Box
 from src.utils.model_utils import PostProcess
@@ -125,7 +125,7 @@ class InferenceModel(BaseModel):
         self._save_predict = True
         # TODO: Add FastModel
 
-        self.predict_loader = StreamDataLoader(source=source, image_size=image_size)
+        self.predict_loader = FileDataLoader(source=source, image_size=image_size)
 
     def setup(self, stage):
         self.vec2box = Vec2Box(

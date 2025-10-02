@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, cast
 
 import torch
 import torch.nn.functional as F
@@ -22,7 +22,7 @@ class Conv(nn.Module):
         out_channels: int,
         kernel_size: _size_2_t,
         *,
-        activation: Optional[str] = "SiLU",
+        activation: str | None = "SiLU",
         **kwargs,
     ):
         super().__init__()
@@ -65,7 +65,7 @@ class Detection(nn.Module):
 
     def __init__(
         self,
-        in_channels: Tuple[int],
+        in_channels: tuple[int, int],
         num_classes: int,
         *,
         reg_max: int = 16,
@@ -76,29 +76,29 @@ class Detection(nn.Module):
         groups = 4 if use_group else 1
         anchor_channels = 4 * reg_max
 
-        first_neck, in_channels = in_channels
+        first_neck, in_channels_etc = in_channels
         anchor_neck = max(round_up(first_neck // 4, groups), anchor_channels, reg_max)
         class_neck = max(first_neck, min(num_classes * 2, 128))
 
         self.anchor_conv = nn.Sequential(
-            Conv(in_channels, anchor_neck, 3),
+            Conv(in_channels_etc, anchor_neck, 3),
             Conv(anchor_neck, anchor_neck, 3, groups=groups),
             nn.Conv2d(anchor_neck, anchor_channels, 1, groups=groups),
         )
         self.class_conv = nn.Sequential(
-            Conv(in_channels, class_neck, 3),
+            Conv(in_channels_etc, class_neck, 3),
             Conv(class_neck, class_neck, 3),
             nn.Conv2d(class_neck, num_classes, 1),
         )
 
         self.anc2vec = Anchor2Vec(reg_max=reg_max)
 
-        self.anchor_conv[-1].bias.data.fill_(1.0)
-        self.class_conv[-1].bias.data.fill_(
+        cast(Tensor, self.anchor_conv[-1].bias.data).fill_(1.0)
+        cast(Tensor, self.class_conv[-1].bias.data).fill_(
             -10
         )  # TODO: math.log(5 * 4 ** idx / 80 ** 3)
 
-    def forward(self, x: Tensor) -> Tuple[Tensor]:
+    def forward(self, x: Tensor) -> tuple[Tensor, Tensor, Tensor]:
         anchor_x = self.anchor_conv(x)
         class_x = self.class_conv(x)
         anchor_x, vector_x = self.anc2vec(anchor_x)
@@ -108,7 +108,7 @@ class Detection(nn.Module):
 class IDetection(nn.Module):
     def __init__(
         self,
-        in_channels: Tuple[int],
+        in_channels: tuple[int, int],
         num_classes: int,
         *args,
         anchor_num: int = 3,
@@ -116,14 +116,13 @@ class IDetection(nn.Module):
     ):
         super().__init__()
 
-        if isinstance(in_channels, tuple):
-            in_channels = in_channels[1]
+        in_channels_1 = in_channels[1]
 
         out_channel = num_classes + 5
         out_channels = out_channel * anchor_num
-        self.head_conv = nn.Conv2d(in_channels, out_channels, 1)
+        self.head_conv = nn.Conv2d(in_channels_1, out_channels, 1)
 
-        self.implicit_a = ImplicitA(in_channels)
+        self.implicit_a = ImplicitA(in_channels_1)
         self.implicit_m = ImplicitM(out_channels)
 
     def forward(self, x):
@@ -135,9 +134,9 @@ class IDetection(nn.Module):
 
 
 class MultiheadDetection(nn.Module):
-    """Mutlihead Detection module for Dual detect or Triple detect"""
+    """Multihead Detection module for Dual detect or Triple detect"""
 
-    def __init__(self, in_channels: List[int], num_classes: int, **head_kwargs):
+    def __init__(self, in_channels: list[int], num_classes: int, **head_kwargs):
         super().__init__()
         DetectionHead = Detection
 
@@ -151,33 +150,33 @@ class MultiheadDetection(nn.Module):
             ]
         )
 
-    def forward(self, x_list: List[torch.Tensor]) -> List[torch.Tensor]:
+    def forward(self, x_list: list[torch.Tensor]) -> list[torch.Tensor]:
         return [head(x) for x, head in zip(x_list, self.heads)]
 
 
 # ----------- Segmentation Class ----------- #
 class Segmentation(nn.Module):
-    def __init__(self, in_channels: Tuple[int], num_maskes: int):
+    def __init__(self, in_channels: tuple[int, int], num_masks: int):
         super().__init__()
-        first_neck, in_channels = in_channels
+        first_neck, in_channels_1 = in_channels
 
-        mask_neck = max(first_neck // 4, num_maskes)
+        mask_neck = max(first_neck // 4, num_masks)
         self.mask_conv = nn.Sequential(
-            Conv(in_channels, mask_neck, 3),
+            Conv(in_channels_1, mask_neck, 3),
             Conv(mask_neck, mask_neck, 3),
-            nn.Conv2d(mask_neck, num_maskes, 1),
+            nn.Conv2d(mask_neck, num_masks, 1),
         )
 
-    def forward(self, x: Tensor) -> Tuple[Tensor]:
+    def forward(self, x: Tensor) -> Tensor:
         x = self.mask_conv(x)
         return x
 
 
 class MultiheadSegmentation(nn.Module):
-    """Mutlihead Segmentation module for Dual segment or Triple segment"""
+    """Multihead Segmentation module for Dual segment or Triple segment"""
 
     def __init__(
-        self, in_channels: List[int], num_classes: int, num_maskes: int, **head_kwargs
+        self, in_channels: list[int], num_classes: int, num_masks: int, **head_kwargs
     ):
         super().__init__()
         mask_channels, proto_channels = in_channels[:-1], in_channels[-1]
@@ -185,13 +184,13 @@ class MultiheadSegmentation(nn.Module):
         self.detect = MultiheadDetection(mask_channels, num_classes, **head_kwargs)
         self.heads = nn.ModuleList(
             [
-                Segmentation((in_channels[0], in_channel), num_maskes)
+                Segmentation((in_channels[0], in_channel), num_masks)
                 for in_channel in mask_channels
             ]
         )
-        self.heads.append(Conv(proto_channels, num_maskes, 1))
+        self.heads.append(Conv(proto_channels, num_masks, 1))
 
-    def forward(self, x_list: List[torch.Tensor]) -> List[torch.Tensor]:
+    def forward(self, x_list: list[torch.Tensor]) -> list[torch.Tensor]:
         return [head(x) for x, head in zip(x_list, self.heads)]
 
 
@@ -206,7 +205,7 @@ class Anchor2Vec(nn.Module):
         )
         self.anc2vec.weight = nn.Parameter(reverse_reg, requires_grad=False)
 
-    def forward(self, anchor_x: Tensor) -> Tensor:
+    def forward(self, anchor_x: Tensor) -> tuple[Tensor, Tensor]:
         anchor_x = rearrange(anchor_x, "B (P R) h w -> B R P h w", P=4)
         vector_x = anchor_x.softmax(dim=1)
         vector_x = self.anc2vec(vector_x)[:, 0]
@@ -223,7 +222,7 @@ class Classification(nn.Module):
         self.pool = nn.AdaptiveAvgPool2d(1)
         self.head = nn.Linear(neck_channels, num_classes)
 
-    def forward(self, x: Tensor) -> Tuple[Tensor]:
+    def forward(self, x: Tensor) -> Tensor:
         x = self.pool(self.conv(x))
         x = self.head(x.flatten(start_dim=1))
         return x
@@ -239,15 +238,15 @@ class RepConv(nn.Module):
         out_channels: int,
         kernel_size: _size_2_t = 3,
         *,
-        activation: Optional[str] = "SiLU",
+        activation: str = "SiLU",
         **kwargs,
     ):
         super().__init__()
         self.act = create_activation_function(activation)
         self.conv1 = Conv(
-            in_channels, out_channels, kernel_size, activation=False, **kwargs
+            in_channels, out_channels, kernel_size, activation=None, **kwargs
         )
-        self.conv2 = Conv(in_channels, out_channels, 1, activation=False, **kwargs)
+        self.conv2 = Conv(in_channels, out_channels, 1, activation=None, **kwargs)
 
     def forward(self, x: Tensor) -> Tensor:
         return self.act(self.conv1(x) + self.conv2(x))
@@ -261,7 +260,7 @@ class Bottleneck(nn.Module):
         in_channels: int,
         out_channels: int,
         *,
-        kernel_size: Tuple[int, int] = (3, 3),
+        kernel_size: tuple[int, int] = (3, 3),
         residual: bool = True,
         expand: float = 1.0,
         **kwargs,
@@ -296,7 +295,7 @@ class RepNCSP(nn.Module):
         *,
         csp_expand: float = 0.5,
         repeat_num: int = 1,
-        neck_args: Dict[str, Any] = {},
+        neck_args: dict[str, Any] = {},
         **kwargs,
     ):
         super().__init__()
@@ -328,7 +327,7 @@ class ELAN(nn.Module):
         out_channels: int,
         part_channels: int,
         *,
-        process_channels: Optional[int] = None,
+        process_channels: int | None = None,
         **kwargs,
     ):
         super().__init__()
@@ -360,9 +359,9 @@ class RepNCSPELAN(nn.Module):
         out_channels: int,
         part_channels: int,
         *,
-        process_channels: Optional[int] = None,
-        csp_args: Dict[str, Any] = {},
-        csp_neck_args: Dict[str, Any] = {},
+        process_channels: int | None = None,
+        csp_args: dict[str, Any] = {},
+        csp_neck_args: dict[str, Any] = {},
         **kwargs,
     ):
         super().__init__()
@@ -403,9 +402,8 @@ class AConv(nn.Module):
 
     def __init__(self, in_channels: int, out_channels: int):
         super().__init__()
-        mid_layer = {"kernel_size": 3, "stride": 2}
         self.avg_pool = Pool("avg", kernel_size=2, stride=1)
-        self.conv = Conv(in_channels, out_channels, **mid_layer)
+        self.conv = Conv(in_channels, out_channels, kernel_size=3, stride=2)
 
     def forward(self, x: Tensor) -> Tensor:
         x = self.avg_pool(x)
@@ -420,10 +418,9 @@ class ADown(nn.Module):
         super().__init__()
         half_in_channels = in_channels // 2
         half_out_channels = out_channels // 2
-        mid_layer = {"kernel_size": 3, "stride": 2}
         self.avg_pool = Pool("avg", kernel_size=2, stride=1)
-        self.conv1 = Conv(half_in_channels, half_out_channels, **mid_layer)
-        self.max_pool = Pool("max", **mid_layer)
+        self.conv1 = Conv(half_in_channels, half_out_channels, kernel_size=3, stride=2)
+        self.max_pool = Pool("max", kernel_size=3, stride=2)
         self.conv2 = Conv(half_in_channels, half_out_channels, kernel_size=1)
 
     def forward(self, x: Tensor) -> Tensor:
@@ -439,14 +436,14 @@ class CBLinear(nn.Module):
     """Convolutional block that outputs multiple feature maps split along the channel dimension."""
 
     def __init__(
-        self, in_channels: int, out_channels: List[int], kernel_size: int = 1, **kwargs
+        self, in_channels: int, out_channels: list[int], kernel_size: int = 1, **kwargs
     ):
         super(CBLinear, self).__init__()
         kwargs.setdefault("padding", auto_pad(kernel_size, **kwargs))
         self.conv = nn.Conv2d(in_channels, sum(out_channels), kernel_size, **kwargs)
         self.out_channels = list(out_channels)
 
-    def forward(self, x: Tensor) -> Tuple[Tensor]:
+    def forward(self, x: Tensor) -> tuple[Tensor, ...]:
         x = self.conv(x)
         return x.split(self.out_channels, dim=1)
 
@@ -458,7 +455,7 @@ class SPPCSPConv(nn.Module):
         in_channels: int,
         out_channels: int,
         expand: float = 0.5,
-        kernel_sizes: Tuple[int] = (5, 9, 13),
+        kernel_sizes: tuple[int, int, int] = (5, 9, 13),
     ):
         super().__init__()
         neck_channels = int(2 * out_channels * expand)
@@ -492,7 +489,7 @@ class SPPELAN(nn.Module):
     """SPPELAN module comprising multiple pooling and convolution layers."""
 
     def __init__(
-        self, in_channels: int, out_channels: int, neck_channels: Optional[int] = None
+        self, in_channels: int, out_channels: int, neck_channels: int | None = None
     ):
         super(SPPELAN, self).__init__()
         neck_channels = neck_channels or out_channels // 2
@@ -518,12 +515,12 @@ class UpSample(nn.Module):
 
 
 class CBFuse(nn.Module):
-    def __init__(self, index: List[int], mode: str = "nearest"):
+    def __init__(self, index: list[int], mode: str = "nearest"):
         super().__init__()
         self.idx = index
         self.mode = mode
 
-    def forward(self, x_list: List[torch.Tensor]) -> List[Tensor]:
+    def forward(self, x_list: list[torch.Tensor]) -> Tensor:
         target = x_list[-1]
         target_size = target.shape[2:]  # Batch, Channel, H, W
 
@@ -577,8 +574,8 @@ class DConv(nn.Module):
         self.alpha = alpha
 
         self.CG = Conv(in_channels, atoms, 1)
-        self.GIE = Conv(atoms, atoms, 5, groups=atoms, activation=False)
-        self.D = Conv(atoms, in_channels, 1, activation=False)
+        self.GIE = Conv(atoms, atoms, 5, groups=atoms, activation=None)
+        self.D = Conv(atoms, in_channels, 1, activation=None)
 
     def PONO(self, x):
         mean = x.mean(dim=1, keepdim=True)
@@ -595,10 +592,10 @@ class DConv(nn.Module):
 
 
 class RepNCSPELAND(RepNCSPELAN):
-    def __init__(self, *args, atoms: 512, rd_args={}, **kwargs):
+    def __init__(self, *args, atoms: int = 512, rd_args={}, **kwargs):
         super().__init__(*args, **kwargs)
-        self.dconv = DConv(atoms=atoms, **rd_args)
+        self.d_conv = DConv(atoms=atoms, **rd_args)
 
     def forward(self, x):
         x = super().forward(x)
-        return self.dconv(x)
+        return self.d_conv(x)

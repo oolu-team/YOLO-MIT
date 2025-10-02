@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from pydantic import BaseModel
 from torch import nn
@@ -25,7 +25,7 @@ class AnchorConfig:
 @dataclass
 class LayerConfig:
     args: dict
-    source: int | str | list[int]
+    source: int | str | list[str | int]
     tags: str
 
 
@@ -36,7 +36,7 @@ BlockConfig = list[dict[str, LayerConfig]]
 class ModelConfig:
     name: str | None
     anchor: AnchorConfig
-    model: dict[str, BlockConfig] = field(default_factory=dict)
+    model: dict[str, BlockConfig]
 
 
 class NMSConfig(BaseModel):

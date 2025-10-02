@@ -12,30 +12,58 @@ from torch import Tensor
 from src.tools.data_augmentation import AugmentationComposer
 
 
+# TODO: stream case
 class StreamDataLoader:
     def __init__(self, source: str, image_size: tuple[int, int]):
-        self.source = source
-        assert self.source is not None
-
         self.running = True
-
-        self.is_stream = False
-        # TODO: is_stream case
-        # self.is_stream = isinstance(self.source, int) or str(
-        #     self.source
-        # ).lower().startswith("rtmp://")
+        # self.source = source
 
         self.transform = AugmentationComposer([], image_size)
         self.stop_event = Event()
 
-        if self.is_stream:
-            self.cap = cv2.VideoCapture(self.source)
-        else:
-            assert not isinstance(self.source, int)
-            self.source = Path(self.source)
-            self.queue = Queue()
-            self.thread = Thread(target=self.load_source)
-            self.thread.start()
+        self.cap = cv2.VideoCapture(source)
+
+    def process_frame(self, frame):
+        if isinstance(frame, np.ndarray):
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame = Image.fromarray(frame)
+        origin_frame = frame
+        frame, _, rev_tensor = self.transform(frame, torch.zeros(0, 5))
+        frame = frame[None]
+        rev_tensor = rev_tensor[None]
+
+        self.current_frame = (frame, rev_tensor, origin_frame)
+
+    def __iter__(self) -> Generator[Tensor, None, None]:
+        return self  # pyright: ignore[reportReturnType]
+
+    def __next__(self) -> tuple[Tensor, Tensor, Image.Image]:
+        ret, frame = self.cap.read()
+        if not ret:
+            self.stop()
+            raise StopIteration
+        self.process_frame(frame)
+        return self.current_frame
+
+    def stop(self):
+        self.running = False
+        self.cap.release()
+
+    def __len__(self):
+        return 0
+
+
+class FileDataLoader:
+    def __init__(self, source: str, image_size: tuple[int, int]):
+        self.running = True
+
+        self.transform = AugmentationComposer([], image_size)
+        self.stop_event = Event()
+
+        self.source = Path(source)
+        self.queue = Queue()
+        self.thread = Thread(target=self.load_source)
+        self.thread.start()
 
     def load_source(self):
         if self.source.is_dir():  # image folder
@@ -74,44 +102,28 @@ class StreamDataLoader:
 
     def process_frame(self, frame):
         if isinstance(frame, np.ndarray):
-            # TODO: we don't need cv2
-            import cv2
-
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame = Image.fromarray(frame)
         origin_frame = frame
         frame, _, rev_tensor = self.transform(frame, torch.zeros(0, 5))
         frame = frame[None]
         rev_tensor = rev_tensor[None]
-        if not self.is_stream:
-            self.queue.put((frame, rev_tensor, origin_frame))
-        else:
-            self.current_frame = (frame, rev_tensor, origin_frame)
+
+        self.queue.put((frame, rev_tensor, origin_frame))
 
     def __iter__(self) -> Generator[Tensor, None, None]:
-        return self
+        return self  # pyright: ignore[reportReturnType]
 
-    def __next__(self) -> Tensor:
-        if self.is_stream:
-            ret, frame = self.cap.read()
-            if not ret:
-                self.stop()
-                raise StopIteration
-            self.process_frame(frame)
-            return self.current_frame
-        else:
-            try:
-                frame = self.queue.get(timeout=1)
-                return frame
-            except Empty:
-                raise StopIteration
+    def __next__(self) -> tuple[Tensor, Tensor, Image.Image]:
+        try:
+            frame = self.queue.get(timeout=1)
+            return frame
+        except Empty:
+            raise StopIteration
 
     def stop(self):
         self.running = False
-        if self.is_stream:
-            self.cap.release()
-        else:
-            self.thread.join(timeout=1)
+        self.thread.join(timeout=1)
 
     def __len__(self):
-        return self.queue.qsize() if not self.is_stream else 0
+        return self.queue.qsize()
