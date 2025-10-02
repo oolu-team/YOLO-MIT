@@ -4,10 +4,19 @@ from typing import cast
 from omegaconf import ListConfig
 from torch import nn
 
-from src.config.config import BlockConfig, LayerConfig, ModelConfig, YOLOLayer
+from src.config.config import BlockConfig, LayerConfig, ModelConfig
 from src.utils.module_utils import get_layer_map
 
 logger = logging.getLogger("yolo")
+
+
+class YOLOLayer(nn.Module):
+    source: int | str | list[int]
+    output: bool
+    tags: str
+    layer_type: str
+    usable: bool
+    external: dict | None
 
 
 class YOLO(nn.Module):
@@ -26,16 +35,17 @@ class YOLO(nn.Module):
         self.layer_map = get_layer_map()  # Get the map Dict[str: Module]
         self.model = nn.ModuleList()
 
-        self.reg_max = getattr(model_cfg.anchor, "reg_max", 16)
-        self.build_model(model_cfg.model)
+        self.reg_max = model_cfg["anchor"].get("reg_max", 16)
+        self.build_model(model_cfg["model"])
 
     def build_model(self, model_arch: dict[str, BlockConfig]):
         self.layer_index = {}
         output_dim, layer_idx = [3], 1
         logger.info(":tractor: Building YOLO")
         for arch_name in model_arch:
-            if model_arch[arch_name]:
-                logger.info(f"  :building_construction:  Building {arch_name}")
+            if not model_arch[arch_name]:
+                continue
+            logger.info(f"  :building_construction:  Building {arch_name}")
             for layer_idx, layer_spec in enumerate(
                 model_arch[arch_name], start=layer_idx
             ):
@@ -52,6 +62,7 @@ class YOLO(nn.Module):
                 ):
                     assert not isinstance(source, list)
                     layer_args["in_channels"] = output_dim[source]
+
                 if any(
                     module in layer_type
                     for module in ["Detection", "Segmentation", "Classification"]
@@ -63,10 +74,9 @@ class YOLO(nn.Module):
                     layer_args["num_classes"] = self.num_classes
                     layer_args["reg_max"] = self.reg_max
 
+                # print(layer_idx, layer_type, layer_args, source)
                 # create layers
                 layer = self.create_layer(layer_type, source, layer_info, **layer_args)
-                self.model.append(layer)
-
                 if layer.tags:
                     if layer.tags in self.layer_index:
                         raise ValueError(f"Duplicate tag '{layer_info['tags']}' found.")
@@ -75,8 +85,11 @@ class YOLO(nn.Module):
                 out_channels = self.get_out_channels(
                     layer_type, layer_args, output_dim, source
                 )
+                # print(out_channels)
                 output_dim.append(out_channels)
                 setattr(layer, "out_c", out_channels)
+                self.model.append(layer)
+
             layer_idx += 1
 
     def forward(self, x, external: dict | None = None, shortcut: str | None = None):
@@ -110,8 +123,9 @@ class YOLO(nn.Module):
         output_dim: list,
         source: int | list,
     ):
-        if hasattr(layer_args, "out_channels"):
+        if "out_channels" in layer_args:
             return layer_args["out_channels"]
+
         if layer_type == "CBFuse":
             assert isinstance(source, list)
             return output_dim[source[-1]]
@@ -135,9 +149,8 @@ class YOLO(nn.Module):
     def get_source_idx(
         self, source: int | str | list[int | str], layer_idx: int
     ) -> int | list[int]:
-        if isinstance(source, ListConfig):
+        if isinstance(source, (list, ListConfig)):
             return [self._get_source_idx(index, layer_idx) for index in source]
-        assert not isinstance(source, list)
         return self._get_source_idx(source, layer_idx)
 
     def create_layer(

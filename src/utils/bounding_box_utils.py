@@ -78,11 +78,11 @@ class Vec2Box:
     def __init__(self, model: YOLO, anchor_cfg: AnchorConfig, image_size, device):
         self.device = device
 
-        if hasattr(anchor_cfg, "strides"):
+        if "strides" in anchor_cfg:
             logger.info(
-                f":japanese_not_free_of_charge_button: Found stride of model {anchor_cfg.strides}"
+                f":japanese_not_free_of_charge_button: Found stride of model {anchor_cfg['strides']}"
             )
-            self.strides = anchor_cfg.strides
+            self.strides = anchor_cfg["strides"]
         else:
             logger.info(
                 ":teddy_bear: Found no stride of model, performed a dummy test for auto-anchor size"
